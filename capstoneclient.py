@@ -1,2 +1,2 @@
-#!/usr/bin/env python3
-
+# Top level
+# Below: clientManager.py, serverManager.py, humanManager.py
