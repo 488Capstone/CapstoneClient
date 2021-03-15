@@ -1,35 +1,19 @@
 # Above: clientManager.py
-# Below: senseBaro.py, senseSoil.py
+# Below: senseSoil.py
 
-# senseManager periodically calls senseBaro and senseSoil every ___ minutes/hours/days, or more often if directed.
-
-# general scheme:
-    # power up the sensor module
-    # wait however long it needs to startup
-    # pull data
-    # cut power to the sensor module
-    # rinse and repeat
+# senseManager periodically calls senseBaro and senseSoil every ___ minutes/hours/days,
+# or more often if directed.
     
 # cutting off power to the sensor module when it isn't being polled is to stop power consumption when not needed.
 
-# Above: senseManager.py
-
-# When called, this module polls the BME280 sensor for all data.
-
-# BME280 uses I2C interface to provide temp, pressure, humidity.
-
-# I2C address is 0x77
-    
-# BME280
-# This code is designed to work with the BME280_I2CS I2C Mini Module available from ControlEverything.com.
-# https://www.controleverything.com/content/Humidity?sku=BME280_I2CS#tabs-0-product_tabset-2
 import smbus
-import time# Get I2C bus
+import time
 
 def senseBaro():
-    bus = smbus.SMBus(1)# BME280 address, 0x76(118)
+    bus = smbus.SMBus(1)                          # BME280 address, 0x76(118)
 # Read data back from 0x88(136), 24 bytes
-    b1 = bus.read_i2c_block_data(0x77, 0x88, 24)# Convert the data
+    b1 = bus.read_i2c_block_data(0x77, 0x88, 24)  # Convert the data
+
 # Temp coefficients
     dig_T1 = b1[1] * 256 + b1[0]
     dig_T2 = b1[3] * 256 + b1[2]
@@ -37,7 +21,8 @@ def senseBaro():
         dig_T2 -= 65536
     dig_T3 = b1[5] * 256 + b1[4]
     if dig_T3 > 32767 :
-        dig_T3 -= 65536# Pressure coefficients
+        dig_T3 -= 65536
+# Pressure coefficients
     dig_P1 = b1[7] * 256 + b1[6]
     dig_P2 = b1[9] * 256 + b1[8]
     if dig_P2 > 32767 :
@@ -62,11 +47,12 @@ def senseBaro():
         dig_P8 -= 65536
     dig_P9 = b1[23] * 256 + b1[22]
     if dig_P9 > 32767 :
-        dig_P9 -= 65536# BME280 address, 0x76(118)
+        dig_P9 -= 65536 # BME280 address, 0x77
 # Read data back from 0xA1(161), 1 byte
-    dig_H1 = bus.read_byte_data(0x77, 0xA1)# BME280 address, 0x76(118)
+    dig_H1 = bus.read_byte_data(0x77, 0xA1)# BME280 address, 0x76
 # Read data back from 0xE1(225), 7 bytes
-    b1 = bus.read_i2c_block_data(0x77, 0xE1, 7)# Convert the data
+    b1 = bus.read_i2c_block_data(0x77, 0xE1, 7) # Convert the data
+
 # Humidity coefficients
     dig_H2 = b1[1] * 256 + b1[0]
     if dig_H2 > 32767 :
@@ -81,10 +67,11 @@ def senseBaro():
     dig_H6 = b1[6]
     if dig_H6 > 127 :
         dig_H6 -= 256# BME280 address, 0x76(118)
+
 # Select control humidity register, 0xF2(242)
 #		0x01(01)	Humidity Oversampling = 1
     bus.write_byte_data(0x77, 0xF2, 0x01)
-# BME280 address, 0x76(118)
+
 # Select Control measurement register, 0xF4(244)
 #		0x27(39)	Pressure and Temperature Oversampling rate = 1
 #					Normal mode
@@ -97,15 +84,21 @@ def senseBaro():
 # Read data back from 0xF7(247), 8 bytes
 # Pressure MSB, Pressure LSB, Pressure xLSB, Temperature MSB, Temperature LSB
 # Temperature xLSB, Humidity MSB, Humidity LSB
-    data = bus.read_i2c_block_data(0x77, 0xF7, 8)# Convert pressure and temperature data to 19-bits
+    data = bus.read_i2c_block_data(0x77, 0xF7, 8)
+
+# Convert pressure and temperature data to 19-bits
     adc_p = ((data[0] * 65536) + (data[1] * 256) + (data[2] & 0xF0)) / 16
     adc_t = ((data[3] * 65536) + (data[4] * 256) + (data[5] & 0xF0)) / 16# Convert the humidity data
-    adc_h = data[6] * 256 + data[7]# Temperature offset calculations
+    adc_h = data[6] * 256 + data[7]
+
+# Temperature offset calculations
     var1 = ((adc_t) / 16384.0 - (dig_T1) / 1024.0) * (dig_T2)
     var2 = (((adc_t) / 131072.0 - (dig_T1) / 8192.0) * ((adc_t)/131072.0 - (dig_T1)/8192.0)) * (dig_T3)
     t_fine = (var1 + var2)
     cTemp = (var1 + var2) / 5120.0
-    fTemp = cTemp * 1.8 + 32# Pressure offset calculations
+    fTemp = cTemp * 1.8 + 32
+
+# Pressure offset calculations
     var1 = (t_fine / 2.0) - 64000.0
     var2 = var1 * var1 * (dig_P6) / 32768.0
     var2 = var2 + var1 * (dig_P5) * 2.0
@@ -116,18 +109,24 @@ def senseBaro():
     p = (p - (var2 / 4096.0)) * 6250.0 / var1
     var1 = (dig_P9) * p * p / 2147483648.0
     var2 = p * (dig_P8) / 32768.0
-    pressure = (p + (var1 + var2 + (dig_P7)) / 16.0) / 100# Humidity offset calculations
+    pressure = (p + (var1 + var2 + (dig_P7)) / 16.0) / 100
+
+# Humidity offset calculations
     var_H = ((t_fine) - 76800.0)
     var_H = (adc_h - (dig_H4 * 64.0 + dig_H5 / 16384.0 * var_H)) * (dig_H2 / 65536.0 * (1.0 + dig_H6 / 67108864.0 * var_H * (1.0 + dig_H3 / 67108864.0 * var_H)))
     humidity = var_H * (1.0 -  dig_H1 * var_H / 524288.0)
     if humidity > 100.0 :
         humidity = 100.0
     elif humidity < 0.0 :
-        humidity = 0.0# Output data to screen
+        humidity = 0.0
+
+# Output data to screen
 #    print("Temperature in Celsius : %.2f C" %cTemp)
 #    print("Temperature in Fahrenheit : %.2f F" %fTemp)
 #    print("Pressure : %.2f hPa " %pressure)
 #    print("Relative Humidity : %.2f %%" %humidity)
+
+# packages everything up all nice and neat, returns as an array.
     data=[cTemp, fTemp, pressure, humidity]
     return data
 
