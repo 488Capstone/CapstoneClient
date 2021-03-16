@@ -1,3 +1,4 @@
+#! /bin/python3
 # Above: clientManager.py
 # Below: senseSoil.py
 
