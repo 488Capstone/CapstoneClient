@@ -30,7 +30,7 @@ class System:
             self.microclimate = microclimate # sunny or shady.
             self.slope = slope # zero slope.
 
-        def manual_control(self): # TODO: add user interrupt to manual control.
+        def manual_control(): # TODO: add user interrupt to manual control.
             GPIO.output(21, GPIO.HIGH)
             print("Zone 1 is now on.")
             time.sleep(5)
