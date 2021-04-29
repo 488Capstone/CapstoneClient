@@ -11,9 +11,8 @@ from board import SCL, SDA
 from adafruit_seesaw.seesaw import Seesaw
 from crontab import CronTab
 
-zone1 = 11 # zone1 on GPIO17
-GPIO.setmode(GPIO.BOARD)
-GPIO.setup(zone, GPIO.OUT)
+
+GPIO.setup(GPIO17, GPIO.OUT)
 
 class System:
     def __init__(self, zipcode, season, soiltype, system_psi):
