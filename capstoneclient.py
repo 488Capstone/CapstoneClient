@@ -226,7 +226,6 @@ class Schedule:
 
 
 def testing():
-    system = System()
     schedule = Schedule()
     sense = Sensors()
     baro_data = sense.baro()
@@ -247,7 +246,7 @@ def testing():
         print("Barometric pressure: ", sensor_data[2])
         print("Soil moisture: ", sensor_data[3])
     elif (choice == '2'):
-        system.Zone.manual_control()
+        System.Zone.manual_control()
     else:
         print("You have chosen...poorly.")
         sys.exit()
