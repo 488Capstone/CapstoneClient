@@ -27,7 +27,7 @@ class System:
             self.applicationrate = applicationrate # 1.5 inches per hour.
             self.soiltype = soiltype # only loamy or sandy.
             self.planttype = planttype # warm grass, cool grass, flowers, shrubs.
-            self.microclimate = microclimate # sunny or shady.
+            self.microclimate = microclimate # always sunny or always shady.
             self.slope = slope # zero slope.
 
         def manual_control(): # TODO: add user interrupt to manual control.
@@ -36,6 +36,34 @@ class System:
             time.sleep(5)
             GPIO.output(21, GPIO.LOW)
             print("Zone 1 is now off.")
+
+
+        def et_calculations(self,): # TODO: Calculate evapotranspiration
+            # I think our system should run on a "day behind" concept - i.e. Tuesday's et calculations will be based on the local data from Monday.
+            baro = Sensors.baro()
+            # P = # barometric pressure. Needed in kPa.
+            # T_max =
+            # T_min =
+            # RH_max = # maximum relative humidity as a decimal.
+            # RH_min = # minimum relative humidity as a decimal.
+            T = (T_max + T_min) / 2  # daily mean air temperature in Celsius
+            # R_n = ?
+            # G = ?
+            # u_2 = ?
+            e_omin = 0.6108 ** ((17.27 * T_min)/(T_min + 237.3))
+            e_omax = 0.6108 ** ((17.27 * T_max)/(T_max + 237.3))
+            e_s = (e_omax + e_omin) / 2 # from a glance, this can be simplified by just taking e_o(T)
+            e_a = ((e_omin * RH_max) + e_omax * RH_min) / 2
+            delta = (2503 ** ((17.27 * T) / (T+237.3))) / ((T + 237.3) ** 2) # from ASCE s.r. - slope of sat. vapor pressure-temp curve
+            psycho = 0.000665 * P  # from ASCE standardized reference
+            C_n = 900 # constant from ASCE standardized reference
+            C_d = 0.34 # constant from ASCE standardized reference
+
+            et_num = 0.408 * delta * (R_n - G) + psycho * (C_n / (T + 273)) * u_2 * (e_s - e_a)
+            et_den = psycho + psycho * (1 + C_d * u_2)
+
+            et = et_num / et_den # millimeters per day
+            return et
 
 
         def water_algo(self, zone): # TODO: Watering algorithm.
@@ -70,9 +98,6 @@ class System:
             # Should each watering session be continuous or include "soak in" breaks?
 
             avgpreciprate = 1.5  # inches per hour; this is a prototyping simplification. this rate will need to be calculated based on line pressure, number of emitters on the line, and nozzle diameter of the specified emitter.
-
-
-        #  def et_calculations(self,): # TODO: Calculate evapotranspiration
 
 
 class Sensors():
@@ -204,20 +229,20 @@ class Sensors():
 class Schedule:
     class Job:
         def __init__(self, zone, duration, day, hour, minute):
-            self.zone = zone                                                               # string - always 'zone1' for now
-            self.duration = duration                                                       # in minutes
-            self.day = day                                                                 # Three-letter string, all caps
-            self.hour = hour                                                               # 0-23
-            self.minute = minute                                                           # 0-59
+            self.zone = zone                                     # string - always 'zone1' for now
+            self.duration = duration                             # in minutes
+            self.day = day                                       # Three-letter string, all caps
+            self.hour = hour                                     # 0-23
+            self.minute = minute                                 # 0-59
 
     def water_scheduler(self, job):
-        schedule = CronTab(user=True)                                                      # opens the crontab (list of all tasks)
-        command_string = './zone_control.py ' + job.zone + ' ' + str(job.duration)         # adds appropriate args to zone_control.py
-        task = schedule.new(command=command_string, comment='ZoneControl')                 # creates a new entry in the crontab
-        task.dow.on(job.day)                                                               # day of week as per object passed to the method
-        task.minute.on(job.minute)                                                         # minute-hand as per object passed to the method
-        task.hour.on(job.hour)                                                             # hour-hand as per object passed to the method
-        task.write()                                                                       # finalizes the task in the crontab                  # This
+        schedule = CronTab(user=True)                                               # opens the crontab (list of all tasks)
+        command_string = './zone_control.py ' + job.zone + ' ' + str(job.duration)  # adds appropriate args to zone_control.py
+        task = schedule.new(command=command_string, comment='ZoneControl')          # creates a new entry in the crontab
+        task.dow.on(job.day)                                                        # day of week as per object passed to the method
+        task.minute.on(job.minute)                                                  # minute-hand as per object passed to the method
+        task.hour.on(job.hour)                                                      # hour-hand as per object passed to the method
+        task.write()                                                                # finalizes the task in the crontab                  # This
 
 
     def clear_tasks(self):
