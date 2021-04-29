@@ -31,14 +31,13 @@ class System:
             self.microclimate = microclimate # sunny or shady.
             self.slope = slope # zero slope.
 
-        def zone_on(self): # TODO: add user interrupt to manual control.
-            GPIO.output(zone1, GPIO.HIGH)
+        def manual_control(self): # TODO: add user interrupt to manual control.
+            GPIO.output(11, GPIO.HIGH)
             print("Zone 1 is now on.")
             time.sleep(5)
-            GPIO.output(zone1, GPIO.LOW)
+            GPIO.output(11, GPIO.LOW)
             print("Zone 1 is now off.")
 
-        def zone_off(self, which_zone):
 
         def water_algo(self, zone): # TODO: Watering algorithm.
 
@@ -228,6 +227,7 @@ class Schedule:
 
 
 def testing():
+    system = System()
     schedule = Schedule()
     sense = Sensors()
     baro_data = sense.baro()
@@ -247,6 +247,8 @@ def testing():
         print("Temperature: ", sensor_data[1])
         print("Barometric pressure: ", sensor_data[2])
         print("Soil moisture: ", sensor_data[3])
+    elif (choice == '2'):
+        system.Zone.manual_control()
     else:
         print("You have chosen...poorly.")
         sys.exit()
