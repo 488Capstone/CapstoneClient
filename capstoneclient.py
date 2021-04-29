@@ -9,6 +9,7 @@ from board import SCL, SDA
 import busio
 from adafruit_seesaw.seesaw import Seesaw
 import datetime
+from crontab import CronTab
 
 
 def sense_baro():
@@ -136,6 +137,16 @@ def sense_baro():
 def sense_soil():
     touch = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
     return touch
+
+
+def water_scheduler(zone, duration, day, hour_time, minute_time):
+    schedule = CronTab(user=True)
+    command_string = './zone_control.py ' + zone + ' ' + str(duration)
+    job = schedule.new(command=command_string, comment=‘SillySprinkler’)
+    job.dow.on(day) # day must be three letter string, all caps
+    job.minute.on(minute_time)
+    job.hour.on(hour_time)
+    schedule.write()
 
 
 baro_data = sense_baro()
