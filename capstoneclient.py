@@ -12,7 +12,7 @@ from adafruit_seesaw.seesaw import Seesaw
 from crontab import CronTab
 
 
-GPIO.setup(GPIO.17, GPIO.OUT)
+GPIO.setup(21, GPIO.OUT)
 
 class System:
     def __init__(self, zipcode, season, soiltype, system_psi):
@@ -31,10 +31,10 @@ class System:
             self.slope = slope # zero slope.
 
         def manual_control(self): # TODO: add user interrupt to manual control.
-            GPIO.output(11, GPIO.HIGH)
+            GPIO.output(21, GPIO.HIGH)
             print("Zone 1 is now on.")
             time.sleep(5)
-            GPIO.output(11, GPIO.LOW)
+            GPIO.output(21, GPIO.LOW)
             print("Zone 1 is now off.")
 
 
