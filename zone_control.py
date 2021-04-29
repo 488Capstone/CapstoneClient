@@ -1,4 +1,5 @@
-
+# TODO: either add functionality for this to function as a manual override by user command
+#  (eg. if duration='user' then do something different) or need an additional script.
 
 import RPi.GPIO as GPIO
 import time
