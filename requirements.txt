@@ -10,3 +10,6 @@ pyusb==1.1.1
 rpi-ws281x==4.2.5
 RPi.GPIO==0.7.0
 sysv-ipc==1.1.0
+
+python-crontab~=2.5.1
+rpi~=0.0.1

@@ -1,0 +1,8 @@
+setup.cfg
+setup.py
+Adafruit_bitfield/Adafruit_bitfield.py
+Adafruit_bitfield/__init__.py
+Adafruit_bitfield.egg-info/PKG-INFO
+Adafruit_bitfield.egg-info/SOURCES.txt
+Adafruit_bitfield.egg-info/dependency_links.txt
+Adafruit_bitfield.egg-info/top_level.txt
