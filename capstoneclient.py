@@ -60,10 +60,12 @@ class System:
             avgpreciprate = 1.5  # inches per hour; this is a prototyping simplification. this rate will need to be calculated based on line pressure, number of emitters on the line, and nozzle diameter of the specified emitter.
 
 
-        def et_calculations(self,): # TODO: Calculate evapotranspiration
+        #  def et_calculations(self,): # TODO: Calculate evapotranspiration
 
 
 class Sensors():
+
+
     def baro(self):
         bus = smbus.SMBus(1)  # BME280 address, 0x76(118)
         # Read data back from 0x88(136), 24 bytes
@@ -184,7 +186,7 @@ class Sensors():
         touch = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
         return touch
 
-    def adc(self, zone): # TODO: Need code to read the ADC.
+    #  def adc(self, zone): # TODO: Need code to read the ADC.
 
 
 class Schedule:
