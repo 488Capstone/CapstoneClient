@@ -228,7 +228,7 @@ def testing():
     print("3: ")
     choice = input("Choose wisely. ")
 
-    if (choice == 1):
+    if (choice == '1'):
         print("Sensor data:")
         print("Timestamp: ", sensor_data[0])
         print("Temperature: ", sensor_data[1])
