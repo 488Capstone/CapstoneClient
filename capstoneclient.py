@@ -12,7 +12,7 @@ from adafruit_seesaw.seesaw import Seesaw
 from crontab import CronTab
 
 
-GPIO.setup(GPIO17, GPIO.OUT)
+GPIO.setup(GPIO.17, GPIO.OUT)
 
 class System:
     def __init__(self, zipcode, season, soiltype, system_psi):
