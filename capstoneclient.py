@@ -6,10 +6,14 @@ import smbus
 import busio
 import datetime
 import sys
+import RPi.GPIO as GPIO
 from board import SCL, SDA
 from adafruit_seesaw.seesaw import Seesaw
 from crontab import CronTab
 
+zone1 = 11 # zone1 on GPIO17
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(zone, GPIO.OUT)
 
 class System:
     def __init__(self, zipcode, season, soiltype, system_psi):
@@ -27,7 +31,16 @@ class System:
             self.microclimate = microclimate # sunny or shady.
             self.slope = slope # zero slope.
 
-        def water_algo(self, zone): # TODO: Watering algorithm needs a lot of work.
+        def zone_on(self): # TODO: add user interrupt to manual control.
+            GPIO.output(zone1, GPIO.HIGH)
+            print("Zone 1 is now on.")
+            time.sleep(5)
+            GPIO.output(zone1, GPIO.LOW)
+            print("Zone 1 is now off.")
+
+        def zone_off(self, which_zone):
+
+        def water_algo(self, zone): # TODO: Watering algorithm.
 
             plantreqs = { # inches of water per week. All this data is based on a quick google for rough-draft purposes.
                 "warm grass": 1,
@@ -187,7 +200,7 @@ class Sensors():
         touch = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
         return touch
 
-    #  def adc(self, zone): # TODO: Need code to read the ADC.
+    #  def adc(self, zone): # TODO: Read ADC.
 
 
 class Schedule:
@@ -224,7 +237,7 @@ def testing():
     print("Welcome aboard, matey.")
     print("Menu:")
     print("1: Check sensor readings.")
-    print("2: ")
+    print("2: Manual zone control.")
     print("3: ")
     choice = input("Choose wisely. ")
 
