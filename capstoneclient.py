@@ -5,6 +5,7 @@ import time
 import smbus
 import busio
 import datetime
+import sys
 from board import SCL, SDA
 from adafruit_seesaw.seesaw import Seesaw
 from crontab import CronTab
@@ -212,11 +213,29 @@ class Schedule:
         schedule = CronTab(user=True)
         schedule.remove_all(comment='ZoneControl')
 
-schedule = Schedule()
 
-sense = Sensors()
-baro_data = sense.baro()
-soil_data = sense.soil()
+def testing():
+    schedule = Schedule()
+    sense = Sensors()
+    baro_data = sense.baro()
+    soil_data = sense.soil()
+    sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
 
-sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
-print("sensor_data: ", sensor_data)
+    print("Welcome aboard, matey.")
+    print("Menu:")
+    print("1: Check sensor readings.")
+    print("2: ")
+    print("3: ")
+    choice = input("Choose wisely. ")
+
+    if (choice == 1):
+        print("Sensor data:")
+        print("Timestamp: ", sensor_data[0])
+        print("Temperature: ", sensor_data[1])
+        print("Barometric pressure: ", sensor_data[2])
+        print("Soil moisture: ", sensor_data[3])
+    else:
+        print("You have chosen...poorly.")
+        sys.exit()
+
+testing()
