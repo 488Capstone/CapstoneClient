@@ -7,8 +7,8 @@ from adafruit_seesaw.seesaw import Seesaw
 
 GPIO.setup(21, GPIO.OUT)
 
-
-def manual_control():  # TODO: add user interrupt to manual control.
+# TODO: add user interrupt to manual control.
+def manual_control():
     GPIO.output(21, GPIO.HIGH)
     print("Zone 1 is now on.")
     time.sleep(5)
@@ -138,5 +138,5 @@ class Sensors():
     def soil(self):
         touch = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
         return touch
-
-    #  def adc(self, zone): # TODO: Read ADC.
+    # TODO: Read ADC.
+    # def adc(self, zone):

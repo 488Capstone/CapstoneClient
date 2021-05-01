@@ -1,8 +1,8 @@
+import datetime
 
-
-def et_calculations():  # TODO: Calculate evapotranspiration
-    # I think our system should run on a "day behind" concept
-    # i.e. Tuesday's et calculations will be based on the local data from Monday.
+# TODO: Calculate evapotranspiration
+def et_calculations():
+    # TODO: API call - download solar data & weather forecast, then process into data
     # P = # barometric pressure. Needed in kPa.
     # T_max =
     # T_min =
@@ -26,4 +26,12 @@ def et_calculations():  # TODO: Calculate evapotranspiration
 
     et = et_num / et_den  # millimeters per day
     et = et / 25.4 # inches per day
+    date = datetime.datetime.now()
+    date = date.strftime("%x")
+    # TODO: log date, calculated ET, and environmental data to JSON.
+    return et
+
+
+def et_calculations_testing():
+    et = 0.2
     return et
