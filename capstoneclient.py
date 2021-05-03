@@ -4,7 +4,7 @@ on_raspi = True
 
 from crontab import CronTab
 from etcalc import *
-from requests import get
+from publish import *
 
 try:
     from raspispecific.py import *
