@@ -25,10 +25,11 @@ class System:
             self.planttype = " "  # warm grass, cool grass, flowers, shrubs.
             self.microclimate = " "  # always sunny or always shady.
             self.slope = 0  # zero slope.
-            self.watering_days = " "
+            self.watering_days = []
             self.pref_time_hrs = 9 # prototype assumption; recommendation should be made based on daily temps with user approval
             self.pref_time_min = 00 # prototype assumption; recommendation should be made based on daily temps with user approval
             self.refET = 0.2 # baseline assumption until updated by startup
+            self.session_time = 0
 
         def water_algo(self):
             emitterefficiency = {
@@ -45,28 +46,31 @@ class System:
             req_watering_time = (cropET / effectiveapplicationrate) * 60 # number of minutes system will be on
             session_time = req_watering_time / len(self.watering_days) # number of minutes per session
             # since slope is assumed to be zero, every watering session will be continuous.
-            print(self.watering_days)
-            plan = Schedule('zone1', session_time, self.watering_days, self.pref_time_hrs, self.pref_time_min)
+            plan = Schedule(zone='zone1', duration=session_time, day=self.watering_days, hour=self.pref_time_hrs, minute=self.pref_time_min)
             Schedule.water_scheduler(plan)
+            return session_time
+
 
 class Schedule:
     def __init__(self, zone, duration, day, hour, minute):
-        self.zone = zone                                     # string - always 'zone1' for now
-        self.duration = duration                             # in minutes
-        self.day = " "                                      # Three-letter string, all caps
-        self.hour = hour                                     # 0-23
-        self.minute = minute                                 # 0-59
+        self.zone = zone                                                                    # string - always 'zone1' for now
+        self.duration = duration                                                            # in minutes
+        self.day = day                                                                      # 0=SUN, 6=SAT
+        self.hour = hour                                                                    # 0-23
+        self.minute = minute                                                                # 0-59
 
     def water_scheduler(self):
-        schedule = CronTab(user=True)                                               # opens the crontab (list of all tasks)
-        command_string = './zone_control.py ' + self.zone + ' ' + str(self.duration)  # adds appropriate args to zone_control.py
-        task = schedule.new(command=command_string, comment='ZoneControl')          # creates a new entry in the crontab
+        schedule = CronTab(user=True)                                                       # opens the crontab (list of all tasks)
+        command_string = './zone_control.py ' + self.zone + ' ' + str(self.duration)        # adds appropriate args to zone_control.py
+        task = schedule.new(command=command_string, comment='ZoneControl')                  # creates a new entry in the crontab
         #TODO: fix scheduling for multiple days
-        task.dow.on('1,3,5')                                                        # day of week as per object passed to the method
-        task.minute.on(self.minute)                                                  # minute-hand as per object passed to the method
-        task.hour.on(self.hour)                                                      # hour-hand as per object passed to the method
-        task.write()                                                                # finalizes the task in the crontab
-        print("a task was created")
+        for x in range(len(self.day)):
+            task.dow.on(self.day[x])                                                        # day of week as per object passed to the method
+            task.minute.on(self.minute)                                                     # minute-hand as per object passed to the method
+            task.hour.on(self.hour)                                                         # hour-hand as per object passed to the method
+            schedule.write()                                                                # finalizes the task in the crontab
+        print("all tasks created")
+        input("Press any key to continue.")
 
 
     def clear_tasks(self):
@@ -74,10 +78,39 @@ class Schedule:
         schedule.remove_all(comment='ZoneControl')
 
 
+def op_menu():
+    print("Menu:")
+    print("1. My System [coming soon]")
+    print("2. My Schedule [coming soon]")
+    print("3. Application Rate Calibration [coming soon]")
+    choice = input("Choose wisely. ")
+    if choice == '1':
+        my_system()
+    elif choice == '2':
+        print("Watering days: ",system.zone1.watering_days)
+        print("Session length: ",system.zone1.session_time, "minutes per watering session")
+        print("Watering time: ",system.zone1.pref_time_hrs, system.zone1.pref_time_min)
+        input("Press any key to continue.")
+        op_menu()
+    elif choice == '3':
+        pass
+    else:
+        print('Try again, turd')
+        op_menu()
+
+
+def my_system():
+    print("System Data:")
+    print("Location: ", system.city, system.state, system.zipcode)
+    print("Yard info: ",system.zone1.soiltype, "with", system.zone1.planttype)
+    print("Watering days: ",system.zone1.watering_days)
+    input("Press any key to continue.")
+    op_menu()
+
+
 def startup():
     print('Excellent choice, sir. Startup protocol initiated.')
-    system = System()
-    system.zone1 = System.Zone()
+
     # system.city = get('https://ipapi.co/city').text
     # system.state = get('https://ipapi.co/region_code').text
     # system.zipcode = get('https://ipapi.co/postal').text
@@ -93,7 +126,7 @@ def startup():
         print("Your sandy soil won't hold water well; more frequent applications of water are best to keep your plants healthy.")
         print("We recommend watering your lawn frequently - three days a week should do nicely.")
         print("We'll make it easy and say Mon-Weds-Fri for now.") # placeholder for user selection
-        system.zone1.watering_days = "'MON','WED','FRI'"
+        system.zone1.watering_days = [1,3,5]
     elif system.zone1.soiltype == 'loamy':
         print("Your loamy soil will hold water well. We recommend picking one watering day a week.")
         print("We'll make it easy and pick Wednesday for now.") # placeholder for user selection
@@ -105,7 +138,8 @@ def startup():
     print("...")
     print("Okay! It looks like this zone will lose about", system.zone1.refET, "inches of water per day to evaporation and plant transpiration. Now we're getting somewhere!")
     system.zone1.applicationrate = 1.5
-    System.Zone.water_algo(system.zone1)
+    system.zone1.session_time = System.Zone.water_algo(system.zone1)
+    op_menu()
 
 
 def raspi_testing():
@@ -152,6 +186,8 @@ def testing():
 
 
 # It begins.
+system = System()
+system.zone1 = System.Zone()
 
 if on_raspi == True:
     raspi_testing()
