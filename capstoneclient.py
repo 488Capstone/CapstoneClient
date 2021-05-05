@@ -4,6 +4,7 @@ on_raspi = True
 
 from crontab import CronTab
 from etcalc import *
+import sqlite as sl
 from publish import *
 
 try:
