@@ -1,0 +1,26 @@
+    {
+      "dt": 1588658400,
+      "main": {
+        "temp": 296.57,
+        "feels_like": 297.22,
+        "pressure": 1014,
+        "humidity": 83,
+        "temp_min": 296.15,
+        "temp_max": 297.15
+      },
+      "wind": {
+        "speed": 4.6,
+        "deg": 190
+      },
+      "clouds": {
+        "all": 40
+      },
+      "weather": [
+        {
+          "id": 802,
+          "main": "Clouds",
+          "description": "scattered clouds",
+          "icon": "03n"
+        }
+      ]
+    },
