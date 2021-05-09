@@ -15,7 +15,7 @@ GPIO.setup(zone, GPIO.OUT)
 
 # script needs to take command line argument “duration” - sprinkle time in minutes
 
-duration = duration * 60  # puts duration into seconds
+duration = int(duration) * 60  # puts duration into seconds
 start_time = time.time()
 GPIO.output(zone, GPIO.HIGH)
 elapsed_time = time.time() - start_time
