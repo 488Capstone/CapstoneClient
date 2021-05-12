@@ -4,8 +4,6 @@
 import json
 import sqlite3 as sl
 import sys
-import time
-
 import requests
 from crontab import CronTab
 import datetime
@@ -59,8 +57,48 @@ def et_calculations(date):  # string passed determines what day ET is evaluated 
     cursor = db.cursor()
     cursor.execute("UPDATE HISTORY SET etcalc = ? WHERE date = ?", (et, date))
     db.commit()
-
     return et
+
+
+def startdatabases():
+    db = sl.connect('my-data.db')
+    # initialize "SENSORS" table:
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS SENSORS (
+        timestamp INT UNIQUE NOT NULL PRIMARY KEY,
+        cTemp REAL,
+        pressurehPa REAL,
+        soilmoisture REAL
+        );
+    """)
+    db.commit()
+    # initialize "HISTORY" table:
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS HISTORY (
+        date TEXT UNIQUE NOT NULL PRIMARY KEY,
+        windspeed REAL,
+        solar REAL,
+        tmax REAL,
+        tmin REAL,
+        rh REAL,
+        pressure REAL,
+        precip REAL,
+        etcalc REAL
+        );
+    """)
+    db.commit()
+    # initialize "SYSTEM" table:
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS SYSTEM (
+        id TEXT UNIQUE NOT NULL PRIMARY KEY,
+        zipcode INT, city TEXT, state TEXT, lat REAL, long REAL, cityID INT,
+        soiltype TEXT, planttype TEXT, microclimate TEXT, slope REAL,
+        waterSun INT, waterMon INT, waterTue INT, waterWed INT, waterThu INT, waterFri INT, waterSat INT,
+        pref_time_hrs TEXT, pref_time_min TEXT,
+        applicationrate REAL, waterdeficit REAL
+        );
+    """)
+    db.commit()
 
 
 def water_algo():
@@ -103,34 +141,17 @@ def clear_tasks():
     schedule.remove_all(comment='ZoneControl')
 
 
-# Queries APIs for last 7 days weather/solar data and dumps it into my-data.db "HISTORY" table
-def gethistoricaldata(lat, long, city):
-    # initializes database & creates table for weather history
-    def startdbhistory():
-        # Initializes database
-        db = sl.connect('my-data.db')
-        db.execute("""
-            CREATE TABLE IF NOT EXISTS HISTORY (
-            date TEXT UNIQUE NOT NULL PRIMARY KEY,
-            windspeed REAL,
-            solar REAL,
-            tmax REAL,
-            tmin REAL,
-            rh REAL,
-            pressure REAL,
-            precip REAL,
-            etcalc REAL
-            );
-        """)
-        db.commit()
-        return db
+# Queries APIs weather/solar data and dumps it into db table "HISTORY"
+# TODO: gethistoricaldata() should take in arg for days of data requested
+def gethistoricaldata(days): # days arg determines number of days
 
     # pulls the past week of solar data
-    def getsolar():
+    def getsolar(lat, long):
         # gets solar data
         # TODO: Update to use lat/long.
-        url = "https://api.solcast.com.au/weather_sites/72dd-d2ae-0565-ae79/estimated_actuals?format=json&api_key" \
-              "=N5x3La865UcWH67BIq3QczgKVSu8jNEJ"
+        #url = "https://api.solcast.com.au/weather_sites/72dd-d2ae-0565-ae79/estimated_actuals?format=json&api_key=N5x3La865UcWH67BIq3QczgKVSu8jNEJ"
+        apikey = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ"
+        url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat, long, 24+days*24)
         payload = {}
         headers = {}
         response = requests.request("GET", url, headers=headers, data=payload)
@@ -143,8 +164,9 @@ def gethistoricaldata(lat, long, city):
     def getweather():
         # gets weather data from the past week.
         # TODO: Update to use lat/long.
+        window = days * 24 * 60 * 60 + 86400 # seconds in a day, plus a one-day buffer.
         url = "http://history.openweathermap.org/data/2.5/history/city?id={}&type=hour&start={}&end" \
-              "={}&appid=ae7cc145d2fea84bea47dbe1764f64c0".format(4157634, round(time.time()-604800), round(time.time()))
+              "={}&appid=ae7cc145d2fea84bea47dbe1764f64c0".format(4157634, round(time.time()-window), round(time.time()))
         print(url)
         payload = {}
         headers = {}
@@ -233,14 +255,14 @@ def gethistoricaldata(lat, long, city):
                         dailydata[x][5], dailydata[x][6]))
             db.commit()
 
-    def parsesolar():
+    def parsesolar(lat, long):
         db = sl.connect('my-data.db')  # connection to DB
         # opens solar data file
         with open('data/solardata.json') as f:
             data = json.load(f)
 
         # limit use of getsolar() - we only get 10 API calls per day.
-        # data = getsolar()
+        data = getsolar(lat, long)
         dailydata = []
         temp = []
 
@@ -274,11 +296,19 @@ def gethistoricaldata(lat, long, city):
             cursor.execute("UPDATE HISTORY SET solar = ? WHERE date = ?", (dailydata[x][1], dailydata[x][0]))
         db.commit()
 
-    startdbhistory()
-    parseweather()
-    parsesolar()
+    db = sl.connect('my-data.db')
+    cursor = db.cursor()
+    cursor.execute("select lat, long, cityid from system where id = 'system'")
+    data = cursor.fetchone()
+    lat, long, cityid = data[0], data[1], data[2]
+
+    parsesolar(lat, long)
+    parseweather(cityid)
 
 
+# TODO: update op_menu() to use database
+# TODO: allow for water budget feature
+# TODO: allow for WaterSense prescribed watering day schedules
 def op_menu():
     print("Menu:")
     print("1. My System [coming soon]")
@@ -299,7 +329,7 @@ def op_menu():
         print('Try again, turd')
         op_menu()
 
-
+# TODO: update my_system() to use database
 def my_system():
     print("System Data:")
     print("Location: ", system.city, system.state, system.zipcode)
@@ -311,48 +341,25 @@ def my_system():
 
 def startup():
     print('Excellent choice, sir. Startup protocol initiated.')
-
     db = sl.connect('my-data.db')
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS SYSTEM (
-        id TEXT UNIQUE NOT NULL PRIMARY KEY,
-        zipcode INT,
-        city TEXT,
-        state TEXT,
-        lat REAL,
-        long REAL,
-        soiltype TEXT,
-        applicationrate REAL,
-        planttype TEXT,
-        microclimate TEXT,
-        slope REAL,
-        waterSun INT,
-        waterMon INT,
-        waterTue INT,
-        waterWed INT,
-        waterThu INT,
-        waterFri INT,
-        waterSat INT,
-        pref_time_hrs TEXT,
-        pref_time_min TEXT,
-        waterdeficit REAL
-        );
-    """)
-    db.commit()
 
+    # Get location data from IP address:
     loc = requests.get('http://ipapi.co/json/?key=H02y7T8oxOo7CwMHhxvGDOP7JJqXArMPjdvMQ6XhA6X4aR4Tub').json()
     city, state, zipcode, lat, long = loc['city'], loc['region_code'], loc['postal'], loc['latitude'], loc['longitude']
-    # city, state, zipcode, lat, long = "Gulf Breeze", "FL", 32563, 30.4003, -87.0288
+
     print("We think you're in {}, {} {}" .format(city, state, zipcode))
     print("Lat/long: {}, {}" .format(lat, long))
     print("For now, we'll assume that's all true.")
     cursor = db.cursor()
-    cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, city, state, zipcode, lat, long) VALUES('system', ?,?,?,?,?)", (city, state, zipcode, lat, long))
+    cityid = 4157634 # TODO: need to lookup cityID, not declare explicityl
+    cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, city, state, zipcode, lat, long, cityid) VALUES('system', ?,?,?,?,?,?)", (city, state, zipcode, lat, long, cityid))
     db.commit()
 
-    gethistoricaldata(lat, long, city)
+    # get historical weather / solar data:
+    gethistoricaldata(days = 7)
     print("Database of historical environmental data built.")
 
+    # build system info:
     soiltype = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or "
                                   "'loamy']")
     cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, soiltype) VALUES('zone1', ?)", (soiltype,))
@@ -370,6 +377,8 @@ def startup():
         print("We'll make it easy and pick Wednesday for now.")  # placeholder for user selection
         cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,0,0,1,0,0,0, 'zone1'))
         db.commit()
+
+
     print("Okay, it looks like we have everything we need to calculate your water needs. We'll do that now.")
     waterdeficit = 0
     for x in range(7):
@@ -442,7 +451,7 @@ def testing():
     if choice == '1':
         startup()
     elif choice == '3':
-        gethistoricaldata()
+        gethistoricaldata(7)
     elif choice == '4':
         et_calculations('20210507')
     else:
@@ -451,6 +460,7 @@ def testing():
 
 
 # It begins.
+startdatabases()
 
 if on_raspi:
     raspi_testing()
