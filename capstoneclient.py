@@ -8,7 +8,6 @@ import time
 
 import requests
 from crontab import CronTab
-from etcalc import *
 import datetime
 # from publish import *
 
@@ -20,11 +19,61 @@ except:
     on_raspi = False
 
 
+def et_calculations(date):  # string passed determines what day ET is evaluated for
+    db = sl.connect('my-data.db')  # connect to database for historical data
+    cursor = db.cursor()
+    cursor.execute("select * from history where date = ?", (date,))
+    dbdata = cursor.fetchone()
+    wind = dbdata[1]  # wind - meters per second,
+    # TODO: account for longwave solar radiation
+    solar = dbdata[2]  # shortwave solar radiation in  MJ / (m^2 * d)
+    T_max = dbdata[3]  # daily max temp in Celsius
+    T_min = dbdata[4]  # daily min temp in Celsius
+    rh = dbdata[5] / 100  # daily average relative humidity as a decimal
+    pressure = dbdata[6] / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
+
+    # daily mean air temp in Celsius:
+    T = (T_max + T_min) / 2
+
+    # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
+    G = 0
+
+    e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
+    e_omin = 0.6108 ** ((17.27 * T_min) / (T_min + 237.3))
+    e_omax = 0.6108 ** ((17.27 * T_max) / (T_max + 237.3))
+    e_s = (e_omin + e_omax) / 2
+    e_a = rh * e_omean
+
+    delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
+    psycho = 0.000665 * pressure  # from ASCE standardized reference
+    C_n = 900  # constant from ASCE standardized reference
+    C_d = 0.34  # constant from ASCE standardized reference
+
+    et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
+    et_den = delta + psycho * (1 + C_d * wind)
+
+    etmm = et_num / et_den  # millimeters per day
+    et = etmm / 25.4 # inches per day
+
+    # enters calculated ET into HISTORY database
+    cursor = db.cursor()
+    cursor.execute("UPDATE HISTORY SET etcalc = ? WHERE date = ?", (et, date))
+    db.commit()
+
+    return et
+
+
 def water_algo():
+    db = sl.connect('my-data.db')
+    cursor = db.cursor()
+    cursor.execute("select applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat,  from system where id = 'zone1'")
+    waterdata = cursor.fetchone()
+    print(waterdata)
     emitterefficiency = {"rotary": 0.7}
-    effectiveapplicationrate = applicationrate * emitterefficiency["rotary"]  # prototype assumption
-    req_watering_time = (waterdeficit / effectiveapplicationrate) * 60  # number of min system will be on
-    session_time = req_watering_time / len(watering_days)  # number of minutes per session
+    watering_days = sum(waterdata[2:8])
+    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]  # prototype assumption
+    req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # number of min system will be on
+    session_time = req_watering_time / watering_days  # number of minutes per session
     # since slope is assumed to be zero, every watering session will be continuous.
     plan = Schedule(zone='zone1', duration=session_time, day=self.watering_days,
                     hour=self.pref_time_hrs, minute=self.pref_time_min)
@@ -340,6 +389,7 @@ def startup():
         waterdeficit -= precip[0]
         cursor.execute(
             "UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
+        water_algo()
         db.commit()
 
     print("Beep...Bop...Boop...")
