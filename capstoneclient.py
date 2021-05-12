@@ -133,9 +133,6 @@ def water_scheduler(zoneid, duration):
     input("Press any key to continue.")
 
 
-def water_scheduler_testing():
-    print("water scheduler is down for maintenance, but we still love you")
-
 def clear_tasks():
     schedule = CronTab(user=True)
     schedule.remove_all(comment='ZoneControl')
@@ -143,33 +140,28 @@ def clear_tasks():
 
 # Queries APIs weather/solar data and dumps it into db table "HISTORY"
 # TODO: gethistoricaldata() should take in arg for days of data requested
-def gethistoricaldata(days): # days arg determines number of days
+def gethistoricaldata(days): # "days" arg determines number of days
 
-    # pulls the past week of solar data
+    # pulls solar data
     def getsolar(lat, long):
-        # gets solar data
-        # TODO: Update to use lat/long.
-        #url = "https://api.solcast.com.au/weather_sites/72dd-d2ae-0565-ae79/estimated_actuals?format=json&api_key=N5x3La865UcWH67BIq3QczgKVSu8jNEJ"
-        apikey = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ"
-        url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat, long, 24+days*24)
-        payload = {}
-        headers = {}
+        apikey, payload, headers = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ", {}, {}
+        hours = 168
+        url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat, long, hours)
         response = requests.request("GET", url, headers=headers, data=payload)
-        print("response type: ", type(response))
-        print("Response data: ", response)
-        data = response.text
-        print("response.text type:", type(data))
-        return json.loads(data)
+        return json.loads(response.text)
 
-    def getweather():
-        # gets weather data from the past week.
+    # pulls weather data
+    def getweather(lat, long):
         # TODO: Update to use lat/long.
         window = days * 24 * 60 * 60 + 86400 # seconds in a day, plus a one-day buffer.
-        url = "http://history.openweathermap.org/data/2.5/history/city?id={}&type=hour&start={}&end" \
-              "={}&appid=ae7cc145d2fea84bea47dbe1764f64c0".format(4157634, round(time.time()-window), round(time.time()))
-        print(url)
-        payload = {}
-        headers = {}
+        appid = "ae7cc145d2fea84bea47dbe1764f64c0"
+        start = round(time.time()-window)
+        end = round(time.time())
+        # url = "http://history.openweathermap.org/data/2.5/history/city?id={}&type=hour&start={}&end={}&appid=ae7cc145d2fea84bea47dbe1764f64c0" \
+        #     .format(4157634, round(time.time()-window), round(time.time()))
+        url = "http://history.openweathermap.org/data/2.5/history/city?lat={}&lon={}&start={}&end={}&appid={}" \
+            .format(lat, long, start, end, appid)
+        payload, headers = {}, {}
         response = requests.request("GET", url, headers=headers, data=payload)
         # opens weather history file
         #   with open('data/weatherhistory.json') as f:
@@ -177,9 +169,9 @@ def gethistoricaldata(days): # days arg determines number of days
         return json.loads(response.text)
 
     # parses weather data pulled from getweather()
-    def parseweather():
+    def parseweather(lat, long):
         db = sl.connect('my-data.db')
-        data = getweather()
+        data = getweather(lat, long)
         temp = []
         dailydata = []  # this will hold the week's worth of valid data at the end.
 
@@ -262,7 +254,8 @@ def gethistoricaldata(days): # days arg determines number of days
             data = json.load(f)
 
         # limit use of getsolar() - we only get 10 API calls per day.
-        data = getsolar(lat, long)
+        #data = getsolar(lat, long)
+
         dailydata = []
         temp = []
 
@@ -303,7 +296,7 @@ def gethistoricaldata(days): # days arg determines number of days
     lat, long, cityid = data[0], data[1], data[2]
 
     parsesolar(lat, long)
-    parseweather(cityid)
+    parseweather()
 
 
 # TODO: update op_menu() to use database
