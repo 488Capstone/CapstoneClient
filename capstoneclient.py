@@ -7,6 +7,7 @@ import sys
 import requests
 from crontab import CronTab
 import datetime
+import time
 # from publish import *
 
 on_raspi = True
@@ -91,7 +92,7 @@ def startdatabases():
     db.execute("""
         CREATE TABLE IF NOT EXISTS SYSTEM (
         id TEXT UNIQUE NOT NULL PRIMARY KEY,
-        zipcode INT, city TEXT, state TEXT, lat REAL, long REAL, cityID INT,
+        zipcode INT, city TEXT, state TEXT, lat REAL, long REAL,
         soiltype TEXT, planttype TEXT, microclimate TEXT, slope REAL,
         waterSun INT, waterMon INT, waterTue INT, waterWed INT, waterThu INT, waterFri INT, waterSat INT,
         pref_time_hrs TEXT, pref_time_min TEXT,
@@ -104,18 +105,18 @@ def startdatabases():
 def water_algo():
     db = sl.connect('my-data.db')
     cursor = db.cursor()
-    cursor.execute("select applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat,  from system where id = 'zone1'")
+    cursor.execute("select applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat from system where id = 'zone1'")
     waterdata = cursor.fetchone()
-    print(waterdata)
+    print("waterdata: ",waterdata)
     emitterefficiency = {"rotary": 0.7}
     watering_days = sum(waterdata[2:8])
-    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]  # prototype assumption
+    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]
     req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # number of min system will be on
     session_time = req_watering_time / watering_days  # number of minutes per session
     # since slope is assumed to be zero, every watering session will be continuous.
-    plan = Schedule(zone='zone1', duration=session_time, day=self.watering_days,
-                    hour=self.pref_time_hrs, minute=self.pref_time_min)
-    Schedule.water_scheduler(plan)
+    #plan = Schedule(zone='zone1', duration=session_time, day=self.watering_days,
+                    #hour=self.pref_time_hrs, minute=self.pref_time_min)
+    #Schedule.water_scheduler(plan)
     return session_time
 
 
@@ -157,24 +158,17 @@ def gethistoricaldata(days): # "days" arg determines number of days
         appid = "ae7cc145d2fea84bea47dbe1764f64c0"
         start = round(time.time()-window)
         end = round(time.time())
-        # url = "http://history.openweathermap.org/data/2.5/history/city?id={}&type=hour&start={}&end={}&appid=ae7cc145d2fea84bea47dbe1764f64c0" \
-        #     .format(4157634, round(time.time()-window), round(time.time()))
         url = "http://history.openweathermap.org/data/2.5/history/city?lat={}&lon={}&start={}&end={}&appid={}" \
             .format(lat, long, start, end, appid)
         payload, headers = {}, {}
         response = requests.request("GET", url, headers=headers, data=payload)
-        # opens weather history file
-        #   with open('data/weatherhistory.json') as f:
-        #       data = json.load(f)
         return json.loads(response.text)
 
     # parses weather data pulled from getweather()
     def parseweather(lat, long):
         db = sl.connect('my-data.db')
         data = getweather(lat, long)
-        temp = []
-        dailydata = []  # this will hold the week's worth of valid data at the end.
-
+        temp, dailydata = [], []
         for x in data['list']:
             timestamp = datetime.datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d%H')
             date = datetime.datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d')
@@ -191,11 +185,8 @@ def gethistoricaldata(days): # "days" arg determines number of days
             temp.append(entry)
 
         # combines hourly data into min/max or avg daily values
-        avgwind = float(temp[0][2][0])
-        avgpres = float(temp[0][3][0])
-        avghum = float(temp[0][4][0])
-        temp_min = float(temp[0][5][0])
-        temp_max = float(temp[0][6][0])
+        avgwind, avgpres, avghum = float(temp[0][2][0]), float(temp[0][3][0]), float(temp[0][4][0])
+        temp_min, temp_max = float(temp[0][5][0]), float(temp[0][6][0])
         try:
             precip = float(temp[0][7][0])
         except:
@@ -208,7 +199,6 @@ def gethistoricaldata(days): # "days" arg determines number of days
                     entry = [temp[x][1][0], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
                              temp_min-273.15, temp_max-273.15, precip / 25.4]
                     dailydata.append(entry)
-                    # TODO: make sure getweather() is pulling the entire last day so there isn't just one data point.
                 elif temp[x][1] == temp[x+1][1]:
                     entrycounter += 1
                     avgwind += float(temp[x+1][2][0])
@@ -224,17 +214,13 @@ def gethistoricaldata(days): # "days" arg determines number of days
                     entry = [temp[x][1][0], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
                              temp_min - 273.15, temp_max - 273.15, precip / 25.4]
                     dailydata.append(entry)
-                    avgwind = float(temp[x+1][2][0])
-                    avgpres = float(temp[x+1][3][0])
-                    avghum = float(temp[x+1][4][0])
-                    temp_min = float(temp[x+1][5][0])
-                    temp_max = float(temp[x+1][6][0])
+                    avgwind, avgpres, avghum = float(temp[x+1][2][0]), float(temp[x+1][3][0]), float(temp[x+1][4][0])
+                    temp_min, temp_max = float(temp[x+1][5][0]), float(temp[x+1][6][0])
                     try:
                         precip = float(temp[x+1][7][0])
                     except:
                         precip = 0
                     entrycounter = 1
-
             except:
                 print("Exception occurred while parsing historical weather data.")
                 pass
@@ -296,7 +282,7 @@ def gethistoricaldata(days): # "days" arg determines number of days
     lat, long, cityid = data[0], data[1], data[2]
 
     parsesolar(lat, long)
-    parseweather()
+    parseweather(lat, long)
 
 
 # TODO: update op_menu() to use database
@@ -344,8 +330,7 @@ def startup():
     print("Lat/long: {}, {}" .format(lat, long))
     print("For now, we'll assume that's all true.")
     cursor = db.cursor()
-    cityid = 4157634 # TODO: need to lookup cityID, not declare explicityl
-    cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, city, state, zipcode, lat, long, cityid) VALUES('system', ?,?,?,?,?,?)", (city, state, zipcode, lat, long, cityid))
+    cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, city, state, zipcode, lat, long) VALUES('system', ?,?,?,?,?)", (city, state, zipcode, lat, long))
     db.commit()
 
     # get historical weather / solar data:
@@ -353,10 +338,12 @@ def startup():
     print("Database of historical environmental data built.")
 
     # build system info:
+    print("Lets talk about Zone 1, since this is a limited prototype and all.")
     soiltype = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or "
                                   "'loamy']")
     cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, soiltype) VALUES('zone1', ?)", (soiltype,))
     db.commit()
+
     # TODO: improve user selection of watering days
     if soiltype == 'sandy':
         print("Your sandy soil won't hold water well; more frequent applications of water are best to keep your "
@@ -371,14 +358,15 @@ def startup():
         cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,0,0,1,0,0,0, 'zone1'))
         db.commit()
 
+    cursor.execute("UPDATE SYSTEM SET applicationrate = 1.5 WHERE id = 'zone1'")
+    db.commit()
 
     print("Okay, it looks like we have everything we need to calculate your water needs. We'll do that now.")
     waterdeficit = 0
     for x in range(7):
         date = (datetime.date.today() - datetime.timedelta(days=x+1)).strftime("%Y%m%d")
         waterdeficit += et_calculations(date)
-    cursor.execute(
-        "UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
+    cursor.execute("UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
     db.commit()
 
     print("Now to account for accumulated precipitation...")
@@ -391,15 +379,11 @@ def startup():
         waterdeficit -= precip[0]
         cursor.execute(
             "UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
-        water_algo()
         db.commit()
 
+    water_algo()
     print("Beep...Bop...Boop...")
     print("Judging by the past week, you have a total water deficit of {} inches." .format(str(waterdeficit)))
-
-
-    cursor.execute("UPDATE SYSTEM SET applicationrate = 1.5 WHERE id = 'zone1'")
-    db.commit()
 
     op_menu()
 
