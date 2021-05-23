@@ -1,14 +1,35 @@
-# This script is meant to be run as a crontab scheduled task.
+##############################################################
+#  this script will be run as a crontab scheduled event,     #
+#  or during startup by importing to capstoneclient.py       #
+#                                                            #
+#                                                            #
+#                                                            #
+#                                                            #
+#                                                            #
+##############################################################
 
-import smbus
-import busio
 import sys
 import sqlite3 as sl
-from board import SCL, SDA
-from adafruit_seesaw.seesaw import Seesaw
+import time
+import requests
+import json
+import datetime
+from crontab import CronTab
 
-# TODO: remove humidity artifacts from baro method
+# this try/except lets code function outside of raspberry pi for development.
+try:
+    import smbus
+    import busio
+    from board import SCL, SDA
+    from adafruit_seesaw.seesaw import Seesaw
+except:
+    print('code not executing from raspi, functionality may be incomplete (dailyactions.py)')
+
+#####################################
+#    BME280 sensor functionality    #
+#####################################
 def baro():
+    # TODO: remove humidity artifacts from baro method
     bus = smbus.SMBus(1)  # BME280 address, 0x76(118)
     # Read data back from 0x88(136), 24 bytes
     b1 = bus.read_i2c_block_data(0x77, 0x88, 24)  # Convert the data
@@ -124,73 +145,23 @@ def baro():
     data = [cTemp, fTemp, pressure, humidity]
     return data
 
+#########################################
+#   soil moisture sensor functionality  #
+#########################################
 def soil():
     soilmoisture = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
     return soilmoisture
 
 # TODO: Read ADC.
-# def adc(zone):
+################################
+#   ADC module functionality   #
+################################
+def adc(zone):
+    pass
 
-
-def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
-    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    schedule.remove_all(comment='ZoneControl')
-    command_string = "./zone_control.py {} {}" .format(str(zoneid), str(duration))  # adds args to zone_control.py
-    for x in range(len(days)):
-        task = schedule.new(command=command_string, comment='ZoneControl')  # creates a new entry in the crontab
-        task.dow.on(days[x])  # day of week as per object passed to the method
-        task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
-        task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
-        schedule.write()  # finalizes the task in the crontab
-        print("task {} created" .format(x))
-    input("All tasks created. Press enter to continue.")
-
-
-def et_calculations(date):  # string passed determines what day ET is evaluated for
-    db = sl.connect('my-data.db')  # connect to database for historical data
-    cursor = db.cursor()
-    cursor.execute("select * from history where date = ?", (date,))
-    dbdata = cursor.fetchone()
-    print("et_calculations - dbdata: ",dbdata)
-    wind = dbdata[1]  # wind - meters per second,
-    # stretch: account for longwave solar radiation
-    solar = dbdata[2]  # shortwave solar radiation in  MJ / (m^2 * d)
-    T_max = dbdata[3]  # daily max temp in Celsius
-    T_min = dbdata[4]  # daily min temp in Celsius
-    rh = dbdata[5] / 100  # daily average relative humidity as a decimal
-    pressure = dbdata[6] / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
-
-    # daily mean air temp in Celsius:
-    T = (T_max + T_min) / 2
-
-    # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
-    G = 0
-
-    e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
-    e_omin = 0.6108 ** ((17.27 * T_min) / (T_min + 237.3))
-    e_omax = 0.6108 ** ((17.27 * T_max) / (T_max + 237.3))
-    e_s = (e_omin + e_omax) / 2
-    e_a = rh * e_omean
-
-    delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
-    psycho = 0.000665 * pressure  # from ASCE standardized reference
-    C_n = 900  # constant from ASCE standardized reference
-    C_d = 0.34  # constant from ASCE standardized reference
-
-    et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
-    et_den = delta + psycho * (1 + C_d * wind)
-
-    etmm = et_num / et_den  # millimeters per day
-    et = etmm / 25.4 # inches per day
-
-    # enters calculated ET into HISTORY database
-    cursor = db.cursor()
-    cursor.execute("UPDATE HISTORY SET etcalc = ? WHERE date = ?", (et, date))
-    db.commit()
-    return et
-
-
-# Queries APIs weather/solar data and dumps it into db table "HISTORY"
+#############################################################################
+#    Queries APIs weather/solar data and dumps it into db table "HISTORY"   #
+#############################################################################
 def gethistoricaldata(days): # "days" arg determines number of days
     print("gethistoricaldata() has begun")
     def getsolar(lat, long):  # pulls solar data
@@ -288,7 +259,7 @@ def gethistoricaldata(days): # "days" arg determines number of days
             data = json.load(f)
         print("file has been opened.")
         # limit use of getsolar() - we only get 10 API calls per day.
-        #data = getsolar(lat, long)
+        data = getsolar(lat, long)
 
         dailydata = []
         temp = []
@@ -336,12 +307,74 @@ def gethistoricaldata(days): # "days" arg determines number of days
     parseweather(lat, long)
     parsesolar(lat, long)   # Queries APIs weather/solar data and dumps it into db table "HISTORY"
 
+############################################################################
+#    calculates ET for a given date based on weather history data in db    #
+############################################################################
+def et_calculations(date):  # string passed determines what day ET is evaluated for
+    db = sl.connect('my-data.db')  # connect to database for historical data
+    cursor = db.cursor()
+    cursor.execute("select * from history where date = ?", (date,))
+    dbdata = cursor.fetchone()
+    print("et_calculations - dbdata: ",dbdata)
+    wind = dbdata[1]  # wind - meters per second,
+    # stretch: account for longwave solar radiation
+    solar = dbdata[2]  # shortwave solar radiation in  MJ / (m^2 * d)
+    T_max = dbdata[3]  # daily max temp in Celsius
+    T_min = dbdata[4]  # daily min temp in Celsius
+    rh = dbdata[5] / 100  # daily average relative humidity as a decimal
+    pressure = dbdata[6] / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
+
+    # daily mean air temp in Celsius:
+    T = (T_max + T_min) / 2
+
+    # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
+    G = 0
+
+    e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
+    e_omin = 0.6108 ** ((17.27 * T_min) / (T_min + 237.3))
+    e_omax = 0.6108 ** ((17.27 * T_max) / (T_max + 237.3))
+    e_s = (e_omin + e_omax) / 2
+    e_a = rh * e_omean
+
+    delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
+    psycho = 0.000665 * pressure  # from ASCE standardized reference
+    C_n = 900  # constant from ASCE standardized reference
+    C_d = 0.34  # constant from ASCE standardized reference
+
+    et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
+    et_den = delta + psycho * (1 + C_d * wind)
+
+    etmm = et_num / et_den  # millimeters per day
+    et = etmm / 25.4 # inches per day
+
+    # enters calculated ET into HISTORY database
+    cursor = db.cursor()
+    cursor.execute("UPDATE HISTORY SET etcalc = ? WHERE date = ?", (et, date))
+    db.commit()
+    return et
+
+
+#################################################
+#    schedules watering events using crontab    #
+#################################################
+def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
+    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    schedule.remove_all(comment='ZoneControl')
+    command_string = "./zone_control.py {} {}" .format(str(zoneid), str(duration))  # adds args to zone_control.py
+    for x in range(len(days)):
+        task = schedule.new(command=command_string, comment='ZoneControl')  # creates a new entry in the crontab
+        task.dow.on(days[x])  # day of week as per object passed to the method
+        task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
+        task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+        schedule.write()  # finalizes the task in the crontab
+        print("task {} created" .format(x))
+    input("All tasks created. Press enter to continue.")
+
 
 choice = sys.argv[0]
 
 db = sl.connect('my-data.db')
 cursor = db.cursor()
-
 
 if choice == "readsensors":
     soil = soil()   # value between [200, 2000]

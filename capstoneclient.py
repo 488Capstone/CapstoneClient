@@ -8,14 +8,15 @@ import requests
 from crontab import CronTab
 import datetime
 import time
-from dailyactions import *
 # from publish import *
+#from dailyactions import gethistoricaldata, et_calculations, water_scheduler
+from dailyactions import *
 
 on_raspi = True
 try:
     from raspispecific import *
 except:
-    print('code not executing from raspi, functionality may be incomplete')
+    print('code not executing from raspi, functionality may be incomplete (capstoneclient.py)')
     on_raspi = False
 
 
@@ -54,11 +55,11 @@ def startdatabases():
         soiltype TEXT, planttype TEXT, microclimate TEXT, slope REAL,
         waterSun INT, waterMon INT, waterTue INT, waterWed INT, waterThu INT, waterFri INT, waterSat INT,
         pref_time_hrs TEXT, pref_time_min TEXT,
-        applicationrate REAL, waterdeficit REAL
+        applicationrate REAL, waterdeficit REAL,
+        setup_complete INT
         );
     """)
     db.commit()
-
 
 def water_algo():
     db = sl.connect('my-data.db')
@@ -79,28 +80,14 @@ def water_algo():
     session_time = req_watering_time / len(watering_days)  # number of minutes per session
     water_scheduler(zoneid = "zone1", days = watering_days, duration = session_time, pref_time_hrs = waterdata[9], pref_time_min = waterdata[10])
     return session_time
-
-
-
-
-
-def clear_tasks():
-    schedule = CronTab(user=True)
-    schedule.remove_all(comment='ZoneControl')
-
-
-
-
-
-
 # TODO: update op_menu() to use database
 # TODO: allow for water budget feature
 # TODO: allow for WaterSense prescribed watering day schedules
 def op_menu():
     print("Menu:")
     print("1. My System [coming soon]")
-    print("2. My Schedule [coming soon]")
-    print("3. Application Rate Calibration [coming soon]")
+    print("2. My Schedule [in progress]")
+    print("3. Application Rate Calibration")
     choice = input("Choose wisely. ")
     if choice == '1':
         my_system()
@@ -111,7 +98,7 @@ def op_menu():
         input("Press any key to continue.")
         op_menu()
     elif choice == '3':
-        pass
+        application_rate_cal()
     else:
         print('Try again, turd')
         op_menu()
@@ -125,6 +112,13 @@ def my_system():
     input("Press any key to continue.")
     op_menu()
 
+
+def my_schedule():
+    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    print("Schedule:\n",schedule)
+
+
+    op_menu()
 
 def startup():
     print('Excellent choice, sir. Startup protocol initiated.')
@@ -193,6 +187,25 @@ def startup():
     print("Beep...Bop...Boop...")
     print("Judging by the past week, you have a total water deficit of {} inches." .format(str(waterdeficit)))
 
+    cursor.execute(
+        "UPDATE SYSTEM SET setup_complete = 1 WHERE id = 'system'")
+    db.commit()
+    print("Setup complete. Redirecting to main menu.")
+    op_menu()
+
+
+def application_rate_cal():
+    print("Lets get calibrating! We'll only do zone 1 today (since I'm only a prototype and all).")
+    print("Here are the instructions for calibration.")
+    print("...")
+    print("...")
+    print("...")
+    new_application_rate = input("Now, enter your new application rate in inches per hour (as an integer or decimal value): ")
+    db = sl.connect('my-data.db')  # connect to database for historical data
+    cursor = db.cursor()
+    cursor.execute(
+        "UPDATE SYSTEM SET applicationrate = ? WHERE id = 'zone1'", (new_application_rate,))
+    db.commit()
     op_menu()
 
 
@@ -225,29 +238,30 @@ def raspi_testing():
         sys.exit()
 
 
-def testing():
-    print("Welcome aboard, matey. What'll it be?")
-    print("1: First startup simulation")
-    # TODO: application rate calibrations
-    print("2: Application rate calibration [coming soon]")
-    print("3: gethistoricaldata()")
-    print("4. ET calculation testing")
-    choice = input("Choose wisely. ")
-    if choice == '1':
-        startup()
-    elif choice == '3':
-        gethistoricaldata(7)
-    elif choice == '4':
-        et_calculations('20210507')
-    else:
-        print('You have chosen...poorly.')
-        sys.exit()
 
 
-# It begins.
+##############################################################
+#                                                            #
+#                                                            #
+#                                                            #
+#                         It Begins.                         #
+#                                                            #
+#                                                            #
+#                                                            #
+##############################################################
+
 startdatabases()
 
-if on_raspi:
-    raspi_testing()
+db = sl.connect('my-data.db')  # connect to database for historical data
+cursor = db.cursor()
+cursor.execute("select setup_complete from system where id = 'system'")
+startup_complete = cursor.fetchone()
+if startup_complete[0] == 1:
+    print("---Not first startup---")
+    if on_raspi:
+        raspi_testing()
+    else:
+        op_menu()
 else:
-    testing()
+    print("First startup! Welcome.")
+    startup()
