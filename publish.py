@@ -66,9 +66,6 @@ def publish(payload):
     myAWSIoTMQTTShadowClient = AWSIoTMQTTShadowClient(args.clientId)
     myAWSIoTMQTTShadowClient.configureEndpoint(args.host, args.port)
     myAWSIoTMQTTShadowClient.configureCredentials(args.rootCAPath, args.privateKeyPath, args.certificatePath)
-    ####################################################################################################################
-
-    # AWSIoTMQTTShadowClient connection configuration
     myAWSIoTMQTTShadowClient.configureAutoReconnectBackoffTime(1, 32, 20)
     myAWSIoTMQTTShadowClient.configureConnectDisconnectTimeout(10)  # 10 sec
     myAWSIoTMQTTShadowClient.configureMQTTOperationTimeout(5)  # 5 sec
@@ -78,29 +75,15 @@ def publish(payload):
     try:
         myAWSIoTMQTTShadowClient.connect()
         print("Connected to AWSIoT.")
-    except:
-        print("Could not connect to AWSIoT shadow client.")
-
-    # Create a device shadow handler, use this to update and delete shadow document
-    try:
         deviceShadowHandler = myAWSIoTMQTTShadowClient.createShadowHandlerWithName(args.thingName, True)
         print("shadow handler created.")
-    except:
-        print("could not create shadow handler.")
-
-    # Delete current shadow JSON doc
-    try:
         deviceShadowHandler.shadowDelete(customShadowCallback_Delete, 5)
         print("current shadow JSON doc deleted.")
-    except:
-        print("could not delete current shadow JSON doc.")
-
-    # Update shadow
-    try:
         deviceShadowHandler.shadowUpdate(json.dumps(payload), customShadowCallback_Update, 5)
+        print("shadow updated.")
     except:
-        print("Could not update shadow.")
-
+        print("exception occurred during AWSIoT connection attempt.")
+    ####################################################################################################################
 
 # Read in command-line parameters. sets defaults if no CLI args are passed.
 def parseArgs():
@@ -114,7 +97,7 @@ def parseArgs():
     parser.add_argument("-id", "--clientId",  action="store", dest="clientId",        help="Targeted client id",           default="basicShadowUpdater")
     args = parser.parse_args()
 
-# TODO: Collin set these default arguments so they'll only work for this device with these certs.
+# TECHNICAL DEBT! Collin set these default arguments so they'll only work for this device with these certs.
     # They will certainly need to be changed to allow other devices to function properly.
 
     # this endpoint will change to Nolan's AWSIoT endpoint.
@@ -129,7 +112,7 @@ def parseArgs():
     if not args.privateKeyPath:
         args.privateKeyPath = "/Users/collinturner/PycharmProjects/CapstoneClient/certs/private.pem.key"
 
-    # TODO: database
+    # TECHNICAL DEBT! Gotta be a better way to do this.
     if not args.thingName:
         args.thingName = "CapstoneClient"
     if not args.clientId:

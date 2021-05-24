@@ -16,7 +16,8 @@ on_raspi = True
 try:
     from raspispecific import *
 except:
-    print('code not executing from raspi, functionality may be incomplete (capstoneclient.py)')
+    print('code not executing from raspi, functionality may be incomplete (capstoneclient.py). Press enter to acknowledge.')
+    input("")
     on_raspi = False
 
 
@@ -80,14 +81,15 @@ def water_algo():
     session_time = req_watering_time / len(watering_days)  # number of minutes per session
     water_scheduler(zoneid = "zone1", days = watering_days, duration = session_time, pref_time_hrs = waterdata[9], pref_time_min = waterdata[10])
     return session_time
-# TODO: update op_menu() to use database
+# FIXME: update op_menu() to use database
 # TODO: allow for water budget feature
 # TODO: allow for WaterSense prescribed watering day schedules
 def op_menu():
     print("Menu:")
-    print("1. My System [coming soon]")
-    print("2. My Schedule [in progress]")
+    print("1. My System")
+    print("2. My Schedule")
     print("3. Application Rate Calibration")
+    print("4. Settings [coming soon]")
     choice = input("Choose wisely. ")
     if choice == '1':
         my_system()
@@ -95,33 +97,70 @@ def op_menu():
         my_schedule()
     elif choice == '3':
         application_rate_cal()
+    elif choice == '4':
+        print("What is exactly do you think, \"coming soon\" means...?")
+        op_menu()
     else:
         print('Try again, turd')
         op_menu()
 
-# TODO: update my_system() to use database
+
 def my_system():
+    db = sl.connect('my-data.db')
+    cursor = db.cursor()
+    cursor.execute("select city, state, zipcode from system where  id = 'system'")
+    systemdata = cursor.fetchone()
+    cursor.execute("select soiltype, applicationrate from system where  id = 'zone1'")
+    zonedata = cursor.fetchone()
+
     print("System Data:")
-    print("Location: ", system.city, system.state, system.zipcode)
-    print("Yard info: ", system.zone1.soiltype, "with", system.zone1.planttype)
-    print("Watering days: ", system.zone1.watering_days)
+    print("Location: {}, {}, {}" .format(systemdata[0], systemdata[1], systemdata[2]))
+    print("Zone 1 soil is primarily {}. Application rate is {} inches per hour." .format(zonedata[0], zonedata[1]))
     input("Press any key to continue.")
     op_menu()
 
 
 def my_schedule():
+    # TECHNICAL DEBT! This code is not hardened against all possible inputs.
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    print(schedule[0])
+    days = [] # init empty array
+
+    # dump every ZoneControl task into days array:
     for tasks in schedule:
-        print(tasks.comment)
+        if tasks.comment == "ZoneControl":
+            days.append([str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])])
+
+    # parse days array into usable strings:
+    day_string = ""
+    for x in range(len(days)):
+        if days[x][0] == "MON": days[x][0] = "Monday"
+        elif days[x][0] == "TUE": days[x][0] = "Tuesday"
+        elif days[x][0] == "WED": days[x][0] = "Wednesday"
+        elif days[x][0] == "THU": days[x][0] = "Thursday"
+        elif days[x][0] == "FRI": days[x][0] = "Friday"
+        elif days[x][0] == "SAT": days[x][0] = "Saturday"
+        elif days[x][0] == "SUN": days[x][0] = "Sunday"
+
+        if days[x][1] == "0": days[x][1] = "00"
+
+        if int(days[x][2]) < 12: days[x][1] = days[x][1] + "AM"
+        else: days[x][1] = days[x][1] + "PM"
+
+        if x+1 == len(days):
+            day_string = day_string + "and " + days[x][0]
+        else:
+            day_string = day_string + days[x][0] + ", "
+    print("Zone 1 is currently scheduled to run on {}." .format(day_string))
+    for x in range(len(days)):
+        print("On {}, zone 1 will run for {} minutes starting at {}:{}." .format(days[x][0], days[x][3], days[x][2], days[x][1]))
+
 
 # [0] = 0 - time, minutes
 # [1] = 9 - time, hours
 # [2] = *
 # [3] = *
 # [4] = MON WED FRI
-    # tasks.command
-    # tasks.comment = ZoneControl
+    # tasks.command[23:26] - duration in minutes
     op_menu()
 
 def startup():
@@ -150,7 +189,7 @@ def startup():
     cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, soiltype) VALUES('zone1', ?)", (soiltype,))
     db.commit()
 
-    # TODO: improve user selection of watering days
+    # FIXME: improve user selection of watering days
     if soiltype == 'sandy':
         print("Your sandy soil won't hold water well; more frequent applications of water are best to keep your "
               "plants healthy.")
@@ -261,11 +300,11 @@ cursor = db.cursor()
 cursor.execute("select setup_complete from system where id = 'system'")
 startup_complete = cursor.fetchone()
 if startup_complete[0] == 1:
-    print("---Not first startup---")
+    print("---Not first startup---\n")
     if on_raspi:
         raspi_testing()
     else:
-        my_schedule()
+        op_menu()
 else:
     print("First startup! Welcome.")
     startup()

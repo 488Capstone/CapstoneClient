@@ -23,7 +23,7 @@ try:
     from board import SCL, SDA
     from adafruit_seesaw.seesaw import Seesaw
 except:
-    print('code not executing from raspi, functionality may be incomplete (dailyactions.py)')
+    pass
 
 #####################################
 #    BME280 sensor functionality    #
@@ -156,7 +156,7 @@ def soil():
 ################################
 #   ADC module functionality   #
 ################################
-def adc(zone): # currently working in adcsource.py
+def adc(): # currently working in adcsource.py
     pass
 
 #############################################################################
@@ -172,7 +172,6 @@ def gethistoricaldata(days): # "days" arg determines number of days
         return json.loads(response.text)# pulls solar data# pulls solar data  # pulls solar data  # pulls solar data  # pulls solar data
 
     def getweather(lat, long):
-        # TODO: Update to use lat/long.
         window = days * 24 * 60 * 60 + 86400 # seconds in a day, plus a one-day buffer.
         appid = "ae7cc145d2fea84bea47dbe1764f64c0"
         start = round(time.time()-window)
