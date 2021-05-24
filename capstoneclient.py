@@ -8,7 +8,7 @@ import requests
 from crontab import CronTab
 import datetime
 import time
-# from publish import *
+import publish
 #from dailyactions import gethistoricaldata, et_calculations, water_scheduler
 from dailyactions import *
 
@@ -92,11 +92,7 @@ def op_menu():
     if choice == '1':
         my_system()
     elif choice == '2':
-        print("Watering days: ", system.zone1.watering_days)
-        print("Session length: ", system.zone1.session_time, "minutes per watering session")
-        print("Watering time: ", system.zone1.pref_time_hrs, system.zone1.pref_time_min)
-        input("Press any key to continue.")
-        op_menu()
+        my_schedule()
     elif choice == '3':
         application_rate_cal()
     else:
@@ -115,9 +111,17 @@ def my_system():
 
 def my_schedule():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    print("Schedule:\n",schedule)
+    print(schedule[0])
+    for tasks in schedule:
+        print(tasks.comment)
 
-
+# [0] = 0 - time, minutes
+# [1] = 9 - time, hours
+# [2] = *
+# [3] = *
+# [4] = MON WED FRI
+    # tasks.command
+    # tasks.comment = ZoneControl
     op_menu()
 
 def startup():
@@ -261,7 +265,7 @@ if startup_complete[0] == 1:
     if on_raspi:
         raspi_testing()
     else:
-        op_menu()
+        my_schedule()
 else:
     print("First startup! Welcome.")
     startup()

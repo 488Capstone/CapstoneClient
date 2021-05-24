@@ -156,7 +156,7 @@ def soil():
 ################################
 #   ADC module functionality   #
 ################################
-def adc(zone):
+def adc(zone): # currently working in adcsource.py
     pass
 
 #############################################################################
