@@ -15,35 +15,34 @@ import publish
 from dailyactions import *
 
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
-on_raspi = True                                                                                                        #
-try:                                                                                                                   #
-    from raspispecific import *                                                                                        #
-except:                                                                                                                #
-    input("not on raspi means incomplete functionality. Press enter to acknowledge.")                                  #
-    on_raspi = False                                                                                                   #
-########################################################################################################################
+on_raspi = True
+try:
+    from raspispecific import *
+except:
+    input("not on raspi means incomplete functionality. Press enter to acknowledge.")
+    on_raspi = False
 
 
-# startdatabases() initializes necessary sqlite databases and is used in the startup functionality.                    #
-def start_databases():                                                                                                  #
+# startdatabases() initializes necessary sqlite databases and is used in the startup functionality.
+def start_databases():
     db = sl.connect('my-data.db')
-    # SENSORS table holds readings from device sensors.                                                                #
+    # SENSORS table holds readings from device sensors.
     db.execute("""
         CREATE TABLE IF NOT EXISTS SENSORS (
         timestamp INT UNIQUE NOT NULL PRIMARY KEY,
         cTemp REAL, pressurehPa REAL, soilmoisture REAL
         );
     """)
-    db.commit()                                                                                                        #
-    # HISTORY table holds weather/solar history data from API used to estimate ET and water deficit.                   #
+    db.commit()
+    # HISTORY table holds weather/solar history data from API used to estimate ET and water deficit.
     db.execute("""
         CREATE TABLE IF NOT EXISTS HISTORY (
         date TEXT UNIQUE NOT NULL PRIMARY KEY,
         windspeed REAL, solar REAL, tmax REAL, tmin REAL, rh REAL, pressure REAL, precip REAL, etcalc REAL             
         );
     """)
-    db.commit()                                                                                                        #
-    # SYSTEM table holds data on both zones and the system as a whole. Some columns are only for zone/system data.     #
+    db.commit()
+    # SYSTEM table holds data on both zones and the system as a whole. Some columns are only for zone/system data.
     db.execute("""
         CREATE TABLE IF NOT EXISTS SYSTEM (
         id TEXT UNIQUE NOT NULL PRIMARY KEY,
@@ -55,142 +54,132 @@ def start_databases():                                                          
         setup_complete INT
         );
     """)
-    db.commit()                                                                                                        #
-########################################################################################################################
+    db.commit()
 
 
-# water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab      #
-def water_algo():                                                                                                      #
+# water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
+def water_algo():
     db = sl.connect('my-data.db')
-    cursor = db.cursor()                                                                                               #
+    cursor = db.cursor()
     cursor.execute("SELECT \
                    applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat, \
                    pref_time_hrs, pref_time_min \
                    FROM system WHERE id = 'zone1'")
-    waterdata = cursor.fetchone()                                                                                      #
-    watering_days = []                                                                                                 #
-    if waterdata[2]==1: watering_days.append("SUN")                                                                    #
-    if waterdata[3]==1: watering_days.append("MON")                                                                    #
-    if waterdata[4]==1: watering_days.append("TUE")                                                                    #
-    if waterdata[5]==1: watering_days.append("WED")                                                                    #
-    if waterdata[6]==1: watering_days.append("THU")                                                                    #
-    if waterdata[7]==1: watering_days.append("FRI")                                                                    #
-    if waterdata[8]==1: watering_days.append("SAT")                                                                    #
-    emitterefficiency = {"rotary": 0.7}                                                                                #
-    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]                                              #
-    req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # total number of minutes needed               #
-    session_time = req_watering_time / len(watering_days)  # number of minutes per session                             #
-    water_scheduler(                                                                                                   #
-        zoneid = "zone1",                                                                                              #
-        days = watering_days,                                                                                          #
-        duration = session_time,                                                                                       #
-        pref_time_hrs = waterdata[9],                                                                                  #
-        pref_time_min = waterdata[10])                                                                                 #
-    return session_time                                                                                                #
-########################################################################################################################
+    waterdata = cursor.fetchone()
+    watering_days = []
+    if waterdata[2]==1: watering_days.append("SUN")
+    if waterdata[3]==1: watering_days.append("MON")
+    if waterdata[4]==1: watering_days.append("TUE")
+    if waterdata[5]==1: watering_days.append("WED")
+    if waterdata[6]==1: watering_days.append("THU")
+    if waterdata[7]==1: watering_days.append("FRI")
+    if waterdata[8]==1: watering_days.append("SAT")
+    emitterefficiency = {"rotary": 0.7}
+    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]
+    req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # total number of minutes needed
+    session_time = req_watering_time / len(watering_days)  # number of minutes per session
+    water_scheduler(
+        zoneid = "zone1",
+        days = watering_days,
+        duration = session_time,
+        pref_time_hrs = waterdata[9],
+        pref_time_min = waterdata[10])
+    return session_time
 
 
-# op_menu() is the landing spot for operations.  #######################################################################
-def op_menu():                                                                                                         #
+# op_menu() is the landing spot for operations.
+def op_menu():
     # TODO: create water budget functionality
     # TODO: allow for WaterSense prescribed watering day schedules
-    print("Menu:")                                                                                                     #
-    print("1. My System")                                                                                              #
-    print("2. My Schedule")                                                                                            #
-    print("3. Application Rate Calibration")                                                                           #
-    print("4. Settings [coming soon]")                                                                                 #
-    choice = input("Choose wisely. ")                                                                                  #
-    if choice == '1': my_system()                                                                                      #
-    elif choice == '2': my_schedule()                                                                                  #
-    elif choice == '3': application_rate_cal()                                                                         #
-    elif choice == '4':                                                                                                #
-        print("What is exactly do you think, \"coming soon\" means...?")                                               #
-        op_menu()                                                                                                      #
-    else:                                                                                                              #
-        print('Try again, turd')                                                                                       #
-        op_menu()                                                                                                      #
-########################################################################################################################
+    print("Menu:")
+    print("1. My System")
+    print("2. My Schedule")
+    print("3. Application Rate Calibration")
+    print("4. Settings [coming soon]")
+    choice = input("Choose wisely. ")
+    if choice == '1': my_system()
+    elif choice == '2': my_schedule()
+    elif choice == '3': application_rate_cal()
+    elif choice == '4':
+        print("What is exactly do you think, \"coming soon\" means...?")
+        op_menu()
+    else:
+        print('Try again, turd')
+        op_menu()
 
 
-# my_system() displays basic system/zone data when requested from op_menu()  ###########################################
-def my_system():                                                                                                       #
-    db = sl.connect('my-data.db')                                                                                      #
-    cursor = db.cursor()                                                                                               #
-    cursor.execute("select city, state, zipcode from system where  id = 'system'")                                     #
-    systemdata = cursor.fetchone()                                                                                     #
-    cursor.execute("select soiltype, applicationrate from system where  id = 'zone1'")                                 #
-    zonedata = cursor.fetchone()                                                                                       #
-                                                                                                                       #
-    print("System Data:")                                                                                              #
-    print("Location: {}, {}, {}" .format(systemdata[0], systemdata[1], systemdata[2]))                                 #
-    print("Zone 1 soil is primarily {}. Application rate is {} inches per hour." .format(zonedata[0], zonedata[1]))    #
-    input("Press any key to continue.")                                                                                #
-    op_menu()                                                                                                          #
-########################################################################################################################
+
+# my_system() displays basic system/zone data when requested from op_menu()
+def my_system():
+    db = sl.connect('my-data.db')
+    cursor = db.cursor()
+    cursor.execute("select city, state, zipcode from system where  id = 'system'")
+    systemdata = cursor.fetchone()
+    cursor.execute("select soiltype, applicationrate from system where  id = 'zone1'")
+    zonedata = cursor.fetchone()
+
+    print("System Data:")
+    print("Location: {}, {}, {}" .format(systemdata[0], systemdata[1], systemdata[2]))
+    print("Zone 1 soil is primarily {}. Application rate is {} inches per hour." .format(zonedata[0], zonedata[1]))
+    input("Press any key to continue.")
+    op_menu()
 
 
-# my_schedule() displays basic scheduling data when requested from op_menu()  ##########################################
-def my_schedule():                                                                                                     #
+# my_schedule() displays basic scheduling data when requested from op_menu()
+def my_schedule():
     # TECHNICAL DEBT! This code is not hardened against all possible inputs.
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    days = [] # init empty array                                                                                       #
-                                                                                                                       #
-    # dump every ZoneControl task into days array:                                                                     #
-    for tasks in schedule:                                                                                             #
+    days = [] # init empty array
+
+    # dump every ZoneControl task into days array:
+    for tasks in schedule:
         if tasks.comment == "ZoneControl":                                                                             #
             days.append([str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])])                      #
                                                                                                                        #
-    # parse days array into usable strings:                                                                            #
-    day_string = ""                                                                                                    #
-    for x in range(len(days)):                                                                                         #
-        if days[x][0] == "MON": days[x][0] = "Monday"                                                                  #
-        elif days[x][0] == "TUE": days[x][0] = "Tuesday"                                                               #
-        elif days[x][0] == "WED": days[x][0] = "Wednesday"                                                             #
-        elif days[x][0] == "THU": days[x][0] = "Thursday"                                                              #
-        elif days[x][0] == "FRI": days[x][0] = "Friday"                                                                #
-        elif days[x][0] == "SAT": days[x][0] = "Saturday"                                                              #
-        elif days[x][0] == "SUN": days[x][0] = "Sunday"                                                                #
-                                                                                                                       #
-        if days[x][1] == "0": days[x][1] = "00"                                                                        #
-                                                                                                                       #
-        if int(days[x][2]) < 12: days[x][1] = days[x][1] + "AM"                                                        #
-        else: days[x][1] = days[x][1] + "PM"                                                                           #
-                                                                                                                       #
-        if x+1 == len(days):                                                                                           #
-            day_string = day_string + "and " + days[x][0]                                                              #
-        else:                                                                                                          #
-            day_string = day_string + days[x][0] + ", "                                                                #
-    print("Zone 1 is currently scheduled to run on {}." .format(day_string))                                           #
-    for x in range(len(days)):                                                                                         #
-        print("On {}, zone 1 will run for {} minutes starting at {}:{}." \                                             #
-              .format(days[x][0], days[x][3], days[x][2], days[x][1]))                                                 #
+    # parse days array into usable strings:
+    day_string = ""
+    for x in range(len(days)):
+        if days[x][0] == "MON": days[x][0] = "Monday"
+        elif days[x][0] == "TUE": days[x][0] = "Tuesday"
+        elif days[x][0] == "WED": days[x][0] = "Wednesday"
+        elif days[x][0] == "THU": days[x][0] = "Thursday"
+        elif days[x][0] == "FRI": days[x][0] = "Friday"
+        elif days[x][0] == "SAT": days[x][0] = "Saturday"
+        elif days[x][0] == "SUN": days[x][0] = "Sunday"
 
+        if days[x][1] == "0": days[x][1] = "00"
 
-# [0] = 0 - time, minutes
-# [1] = 9 - time, hours
-# [2] = *
-# [3] = *
-# [4] = MON WED FRI
-    # tasks.command[23:26] - duration in minutes
+        if int(days[x][2]) < 12: days[x][1] = days[x][1] + "AM"
+        else: days[x][1] = days[x][1] + "PM"
+
+        if x+1 == len(days):
+            day_string = day_string + "and " + days[x][0]
+        else:
+            day_string = day_string + days[x][0] + ", "
+    print("Zone 1 is currently scheduled to run on {}." .format(day_string))
+    for x in range(len(days)):
+        print("On {}, zone 1 will run for {} minutes starting at {}:{}." \
+              .format(days[x][0], days[x][3], days[x][2], days[x][1]))
     op_menu()
-########################################################################################################################
+
 
 def startup():
     print('Excellent choice, sir. Startup protocol initiated.')
-    db = sl.connect('my-data.db')
 
     # Get location data from IP address:
     loc = requests.get('http://ipapi.co/json/?key=H02y7T8oxOo7CwMHhxvGDOP7JJqXArMPjdvMQ6XhA6X4aR4Tub').json()
     city, state, zipcode, lat, long = loc['city'], loc['region_code'], loc['postal'], loc['latitude'], loc['longitude']
-
     print("We think you're in {}, {} {}" .format(city, state, zipcode))
     print("Lat/long: {}, {}" .format(lat, long))
     print("For now, we'll assume that's all true.")
+
+    # enter location into system database:
+    db = sl.connect('my-data.db')
     cursor = db.cursor()
     cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, city, state, zipcode, lat, long) VALUES('system', ?,?,?,?,?)", (city, state, zipcode, lat, long))
     db.commit()
 
-    # get historical weather / solar data:
+    # get historical weather / solar data, build database. This does the past week as a starting point for a water deficit.
     gethistoricaldata(days = 7)
     print("Database of historical environmental data built.")
 
@@ -198,20 +187,22 @@ def startup():
     print("Lets talk about Zone 1, since this is a limited prototype and all.")
     soiltype = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or "
                                   "'loamy']")
+    while soiltype != ("sandy" or "loamy"):
+        soiltype = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or loamy?")
     cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, soiltype) VALUES('zone1', ?)", (soiltype,))
     db.commit()
 
-    # FIXME: improve user selection of watering days
+    # FIXME: improve user selection of watering days and times.
+    # system defaults to 9:00AM watering time.
     if soiltype == 'sandy':
-        print("Your sandy soil won't hold water well; more frequent applications of water are best to keep your "
-              "plants healthy.")
+        print("Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy.")
         print("We recommend watering your lawn frequently - three days a week should do nicely.")
-        print("We'll make it easy and say Mon-Weds-Fri for now.")  # placeholder for user selection
+        print("We'll make it easy and say Mon-Weds-Fri for now. You can always change this in settings.")
         cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,1,0,1,0,1,0, 'zone1'))
         db.commit()
     elif soiltype == 'loamy':
         print("Your loamy soil will hold water well. We recommend picking one watering day a week.")
-        print("We'll make it easy and pick Wednesday for now.")  # placeholder for user selection
+        print("We'll make it easy and pick Wednesday for now. You can always change this in settings.")  # placeholder for user selection
         cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,0,0,1,0,0,0, 'zone1'))
         db.commit()
 
@@ -252,9 +243,9 @@ def startup():
 def application_rate_cal():
     print("Lets get calibrating! We'll only do zone 1 today (since I'm only a prototype and all).")
     print("Here are the instructions for calibration.")
-    print("...")
-    print("...")
-    print("...")
+    print("...") # Insert instructions here
+    print("...") # Insert instructions here
+    print("...") # Insert instructions here
     new_application_rate = input("Now, enter your new application rate in inches per hour (as an integer or decimal value): ")
     db = sl.connect('my-data.db')  # connect to database for historical data
     cursor = db.cursor()
@@ -293,17 +284,12 @@ def raspi_testing():
         sys.exit()
 
 
-
-
-##############################################################
-#                                                            #
-#                                                            #
-#                                                            #
-#                         It Begins.                         #
-#                                                            #
-#                                                            #
-#                                                            #
-##############################################################
+##############################################
+#                                            #
+#                 IT BEGINS.                 #
+#                 (main)                     #
+#                                            #
+##############################################
 
 start_databases()
 
