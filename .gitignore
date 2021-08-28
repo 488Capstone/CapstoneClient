@@ -1,2 +1,5 @@
 AWSiOT
 /certs/
+
+/env
+*.db
