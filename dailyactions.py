@@ -1,11 +1,6 @@
 ##############################################################
 #  this script will be run as a crontab scheduled event,     #
 #  or during startup by importing to capstoneclient.py       #
-#                                                            #
-#                                                            #
-#                                                            #
-#                                                            #
-#                                                            #
 ##############################################################
 
 import sys
@@ -169,7 +164,7 @@ def gethistoricaldata(days): # "days" arg determines number of days
         hours = 168
         url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat, long, hours)
         response = requests.request("GET", url, headers=headers, data=payload)
-        return json.loads(response.text)# pulls solar data# pulls solar data  # pulls solar data  # pulls solar data  # pulls solar data
+        return json.loads(response.text)# pulls solar data
 
     def getweather(lat, long):
         window = days * 24 * 60 * 60 + 86400 # seconds in a day, plus a one-day buffer.
@@ -314,7 +309,7 @@ def et_calculations(date):  # string passed determines what day ET is evaluated 
     cursor = db.cursor()
     cursor.execute("select * from history where date = ?", (date,))
     dbdata = cursor.fetchone()
-    print("et_calculations - dbdata: ",dbdata)
+
     wind = dbdata[1]  # wind - meters per second,
     # stretch: account for longwave solar radiation
     solar = dbdata[2]  # shortwave solar radiation in  MJ / (m^2 * d)
@@ -350,7 +345,44 @@ def et_calculations(date):  # string passed determines what day ET is evaluated 
     cursor = db.cursor()
     cursor.execute("UPDATE HISTORY SET etcalc = ? WHERE date = ?", (et, date))
     db.commit()
+
+    cursor = db.cursor()
+    cursor.execute("select * from history where date = ?", (date,))
+    dbdata = cursor.fetchone()
+    print("et_calculations - dbdata: ", dbdata)
     return et
+
+
+# water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
+def water_algo():
+    db = sl.connect('my-data.db')
+    cursor = db.cursor()
+    cursor.execute("SELECT \
+                   applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat, \
+                   pref_time_hrs, pref_time_min \
+                   FROM system WHERE id = 'zone1'")
+    waterdata = cursor.fetchone()
+    watering_days = []
+    if waterdata[2]==1: watering_days.append("SUN")
+    if waterdata[3]==1: watering_days.append("MON")
+    if waterdata[4]==1: watering_days.append("TUE")
+    if waterdata[5]==1: watering_days.append("WED")
+    if waterdata[6]==1: watering_days.append("THU")
+    if waterdata[7]==1: watering_days.append("FRI")
+    if waterdata[8]==1: watering_days.append("SAT")
+
+    # TECHNICAL DEBT! Prototype only accounts for rotary sprinklers
+    emitterefficiency = {"rotary": 0.7}
+    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]
+    req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # total number of minutes needed
+    session_time = req_watering_time / len(watering_days)  # number of minutes per watering session
+    water_scheduler(
+        zoneid = "zone1",
+        days = watering_days,
+        duration = session_time,
+        pref_time_hrs = waterdata[9],
+        pref_time_min = waterdata[10])
+    return session_time
 
 
 #################################################
@@ -369,6 +401,12 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         print("task {} created" .format(x))
     input("All tasks created. Press enter to continue.")
 
+##############################################
+#                                            #
+#                 IT BEGINS.                 #
+#                 (main)                     #
+#                                            #
+##############################################
 
 choice = sys.argv[0]
 
@@ -384,6 +422,22 @@ if choice == "readsensors":
 elif choice == "dailyupdate":
     # TODO: daily weather history updates / ET recalculations
     # TODO: rework watering tasks pursuant to ET recalculations
-    gethistoricaldata(days = 1)
-    et_calculations((datetime.date.today()).strftime("%Y%m%d"))
 
+    cursor.execute("select waterdeficit from system where id = 'system'")
+    data = cursor.fetchone()
+    waterdeficit = data[0]
+
+    gethistoricaldata(days = 1)
+    waterdeficit += et_calculations((datetime.date.today()).strftime("%Y%m%d"))
+
+    date = (datetime.date.today()).strftime("%Y%m%d")
+    db = sl.connect('my-data.db')  # connect to database for historical data
+    cursor = db.cursor()
+    cursor.execute("select precip from history where date = ?", (date,))
+    precip = cursor.fetchone()
+    waterdeficit -= precip[0]
+
+    cursor.execute("UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
+    db.commit()
+
+    water_algo()

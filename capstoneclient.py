@@ -14,12 +14,13 @@ import time
 import publish
 from dailyactions import *
 
+
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
 on_raspi = True
 try:
     from raspispecific import *
 except:
-    input("not on raspi means incomplete functionality. Press enter to acknowledge.")
+    input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
     on_raspi = False
 
 
@@ -57,34 +58,7 @@ def start_databases():
     db.commit()
 
 
-# water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
-def water_algo():
-    db = sl.connect('my-data.db')
-    cursor = db.cursor()
-    cursor.execute("SELECT \
-                   applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat, \
-                   pref_time_hrs, pref_time_min \
-                   FROM system WHERE id = 'zone1'")
-    waterdata = cursor.fetchone()
-    watering_days = []
-    if waterdata[2]==1: watering_days.append("SUN")
-    if waterdata[3]==1: watering_days.append("MON")
-    if waterdata[4]==1: watering_days.append("TUE")
-    if waterdata[5]==1: watering_days.append("WED")
-    if waterdata[6]==1: watering_days.append("THU")
-    if waterdata[7]==1: watering_days.append("FRI")
-    if waterdata[8]==1: watering_days.append("SAT")
-    emitterefficiency = {"rotary": 0.7}
-    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]
-    req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # total number of minutes needed
-    session_time = req_watering_time / len(watering_days)  # number of minutes per session
-    water_scheduler(
-        zoneid = "zone1",
-        days = watering_days,
-        duration = session_time,
-        pref_time_hrs = waterdata[9],
-        pref_time_min = waterdata[10])
-    return session_time
+
 
 
 # op_menu() is the landing spot for operations.
@@ -96,11 +70,12 @@ def op_menu():
     print("2. My Schedule")
     print("3. Application Rate Calibration")
     print("4. Settings [coming soon]")
+    print("5. Water budgeting [coming soon]")
     choice = input("Choose wisely. ")
     if choice == '1': my_system()
     elif choice == '2': my_schedule()
     elif choice == '3': application_rate_cal()
-    elif choice == '4':
+    elif choice == '4' or '5':
         print("What is exactly do you think, \"coming soon\" means...?")
         op_menu()
     else:
@@ -185,27 +160,25 @@ def startup():
 
     # build system info:
     print("Lets talk about Zone 1, since this is a limited prototype and all.")
-    soiltype = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or "
-                                  "'loamy']")
+    soiltype = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or ""'loamy']")
     while soiltype != ("sandy" or "loamy"):
         soiltype = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or loamy?")
     cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, soiltype) VALUES('zone1', ?)", (soiltype,))
     db.commit()
 
-    # FIXME: improve user selection of watering days and times.
-    # system defaults to 9:00AM watering time.
+    # TECHNICAL DEBT! improve user selection of watering days and times.
     if soiltype == 'sandy':
         print("Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy.")
-        print("We recommend watering your lawn frequently - three days a week should do nicely.")
-        print("We'll make it easy and say Mon-Weds-Fri for now. You can always change this in settings.")
+        print("Three days a week should do nicely. Lets say Mon-Weds-Fri for now.")
         cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,1,0,1,0,1,0, 'zone1'))
         db.commit()
     elif soiltype == 'loamy':
         print("Your loamy soil will hold water well. We recommend picking one watering day a week.")
-        print("We'll make it easy and pick Wednesday for now. You can always change this in settings.")  # placeholder for user selection
+        print("We'll make it easy and pick Wednesday for now.")
         cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,0,0,1,0,0,0, 'zone1'))
         db.commit()
 
+    # TECHNICAL DEBT! Prototype doesn't allow changing the time of day for watering.
     cursor.execute("UPDATE SYSTEM SET applicationrate = 1.5, pref_time_hrs = '09', pref_time_min = '00' WHERE id = 'zone1'")
     db.commit()
 
@@ -229,6 +202,8 @@ def startup():
             "UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
         db.commit()
 
+# TECHNICAL DEBT - how much did you water your lawn over the past week?
+
     water_algo()
     print("Beep...Bop...Boop...")
     print("Judging by the past week, you have a total water deficit of {} inches." .format(str(waterdeficit)))
@@ -236,9 +211,27 @@ def startup():
     cursor.execute(
         "UPDATE SYSTEM SET setup_complete = 1 WHERE id = 'system'")
     db.commit()
+
+    print("Creating recurring tasks...")
+    task_scheduler()
+
     print("Setup complete. Redirecting to main menu.")
     op_menu()
 
+
+def task_scheduler():
+    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+
+    daily_update = schedule.new(command="./dailyactions.py dailyupdate", comment="Recurring")
+    daily_update.setall('0 3 * * *')
+
+    if on_raspi == True:
+        sensor_query = schedule.new(command="./dailyactions.py readsensors", comment="Recurring")
+        sensor_query.setall('*/5 0 0 0 0')
+
+    schedule.write()
+    print(schedule)
+    return
 
 def application_rate_cal():
     print("Lets get calibrating! We'll only do zone 1 today (since I'm only a prototype and all).")
@@ -297,12 +290,13 @@ db = sl.connect('my-data.db')  # connect to database for historical data
 cursor = db.cursor()
 cursor.execute("select setup_complete from system where id = 'system'")
 startup_complete = cursor.fetchone()
-if startup_complete[0] == 1:
-    print("---Not first startup---\n")
-    if on_raspi:
-        raspi_testing()
+try:
+    if startup_complete[0] != True:
+        print("---Not first startup---\n")
+        if on_raspi:
+            raspi_testing()
     else:
         op_menu()
-else:
+except:
     print("First startup! Welcome.")
     startup()
