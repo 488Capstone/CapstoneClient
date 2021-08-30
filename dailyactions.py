@@ -179,7 +179,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
         appid = "ae7cc145d2fea84bea47dbe1764f64c0"
         start = round(time.time()-window)
         end = round(time.time())
-        print(f'lat: {lat_w}, long: {long_w}, start: {start}, stop: {end}')
+        # print(f'lat: {lat_w}, long: {long_w}, start: {start}, stop: {end}')
         # url = f"http://history.openweathermap.org/data/2.5/history/city?lat={lat_w}&lon={long_w}&start={start}&end={end}&appid={appid}"
         url = "http://history.openweathermap.org/data/2.5/history/city?lat={}&lon={}&start={}&end={}&appid={}" \
             .format(lat_w, long_w, start, end, appid)
@@ -197,7 +197,6 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
         for x in data['list']:
             timestamp = datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d%H')
             date_pw = date.fromtimestamp(int(x['dt']))
-            # print(f'date_pw: {date_pw}')
             windspeed = x['wind']['speed']
             pressure = x['main']['pressure']
             humidity = x['main']['humidity']
@@ -208,7 +207,6 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
             except:
                 precip = 0
             entry = [timestamp, date_pw, windspeed, pressure, humidity, temp_min, temp_max, precip]
-            # print(f'entry: {entry}')
             temp.append(entry)
 
         # combines hourly data into min/max or avg daily values
@@ -280,8 +278,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
 
         dailydata = []
         temp = []
-        # print("solar length: ", len(data))
-        print(f'solar data: {data}')
+
 
         for x in data['estimated_actuals']:
             # date = x['period_end'][0:10].replace('-', '')
@@ -312,20 +309,23 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
 
         print("solar value length: ", len(entry))
         # for each history item find entry w/ matching date in dailydata and update history item solar value
+        # todo: depending on how well solar api and weather api date ranges match some days may have no solar data,
+        #  possibly no solar data if using json list. maybe do solar first, use that range for weather
         for history_item in wl_ps:
             wl_date = history_item.date
-            print(f'wl_date: {wl_date}')
-            print(f'dailydata:{dailydata}')
+
             matching_list = list(filter(lambda e: e[0] == wl_date, dailydata))
             if len(matching_list) >= 1:
                 history_item.solar = matching_list[0][1]
-            print(history_item)
+
 
         return wl_ps
 
+    # generate list of day items with weather data, apply solar data to matching days
     weather_list = parseweather(latitude, longitude)
     weather_solar_list = parsesolar(latitude, longitude, weather_list)   # Queries APIs weather/solar data and dumps it into db table "HISTORY"
     final_list = []
+    # apply et data to each daily item
     for item in weather_solar_list:
         final_list.append(et_calculations(item))
     return final_list
