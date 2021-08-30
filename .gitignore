@@ -8,3 +8,5 @@ AWSiOT
 /env/
 *.pyc
 *.iml
+/.idea/dataSources.local.xml
+/.idea/dataSources.xml
