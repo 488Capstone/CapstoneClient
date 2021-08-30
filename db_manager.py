@@ -6,14 +6,13 @@ from models import Base, SystemZoneConfig, SensorEntry, HistoryItem
 class DBManager:
 
     def __init__(self):
-        self.engine = create_engine("sqlite+pysqlite:///my_data", echo=True, future=True)
+        self.engine = create_engine("sqlite+pysqlite:///my_data", echo=False, future=True)
         self.my_session = Session(self.engine)
         # self.Session = sessionmaker(self.engine)
 
     def start_databases(self):
         """ Initializes database from models, creates tables if not present."""
         Base.metadata.create_all(self.engine)
-        print(self.get(SystemZoneConfig, "system").setup_complete)
         if not self.get(SystemZoneConfig, "system"):
             self.setup_system()
 
