@@ -121,7 +121,7 @@ def startup():
     # build system info:
     print("Lets talk about Zone 1, since this is a limited prototype and all.")
     soil_type = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or ""'loamy']")
-    while soil_type != ("sandy" or "loamy"):
+    if soil_type != "sandy" and soil_type != "loamy":
         soil_type = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or loamy?")
 
     zone1.soil_type = soil_type
