@@ -1,2 +1,10 @@
 AWSiOT
 /certs/
+
+*.db
+/test_db
+/my_data
+
+/env/
+*.pyc
+*.iml
