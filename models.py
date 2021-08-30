@@ -1,9 +1,8 @@
-from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
+from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, Time, MetaData
 from sqlalchemy.orm import declarative_base
 
 
 Base = declarative_base()
-
 
 
 # SENSORS table holds readings from device sensors.
@@ -13,6 +12,8 @@ class SensorEntry(Base):
     temp_c = Column(Float)
     pressure_hPa = Column(Float)
     moisture = Column(Float)
+    battery_voltage = Column(Float)
+
 
     def __repr__(self):
         return f"<SensorEntry: datetime={self.datetime}, " \
@@ -71,3 +72,23 @@ class SystemZoneConfig(Base):
     application_rate = Column(Float)
     water_deficit = Column(Float)
     setup_complete = Column(Boolean)
+    battery_low_cutoff_voltage = Column(Float)
+    battery_high_cutoff_voltage = Column(Float)
+    moisture_high_cutoff = Column(Float)
+    temperature_low_cutoff = Column(Float)
+
+class SystemOpState(Base):
+    __tablename__ = "system_state"
+    key = Column(Integer, primary_key=True, autoincrement=True)
+    running_status = Column(Boolean) # read only
+    faulted_status = Column(Boolean) # read only
+    charging_status = Column(Boolean)
+    charging_source = Column(Integer)
+    manual_water_on = Column(Boolean)
+    manual_water_off = Column(Boolean)
+    manual_on_grid = Column(Boolean)
+    has_internet = Column(Boolean)
+
+    battery_drain_rate = Column(Float)  # calc
+    water_applied_amt = Column(Float)  # calc - inH2O applied this session
+    water_start_time = Column(Time)

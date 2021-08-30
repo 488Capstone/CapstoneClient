@@ -248,7 +248,6 @@ db.start_databases()
 
 
 my_sys = db.get(SystemZoneConfig, "system")
-
 zone1 = db.get(SystemZoneConfig, "zone1")
 
 if on_raspi:
