@@ -260,6 +260,3 @@ if my_sys.setup_complete:
 else:
     print("First startup! Welcome.")
     startup()
-
-
-
