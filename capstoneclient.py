@@ -4,17 +4,16 @@
 # this script contains setup and operation of the device.           #
 #####################################################################
 
-import json
-import sqlite3 as sl
 import sys
 import requests
 from crontab import CronTab
 import datetime
-import time
-import publish
-from dailyactions import *
+from dailyactions import gethistoricaldata, water_algo
+from db_manager import DBManager
+from models import SystemZoneConfig
 
 
+# todo: maybe environment variable
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
 on_raspi = True
 try:
@@ -22,43 +21,6 @@ try:
 except:
     input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
     on_raspi = False
-
-
-# startdatabases() initializes necessary sqlite databases and is used in the startup functionality.
-def start_databases():
-    db = sl.connect('my-data.db')
-    # SENSORS table holds readings from device sensors.
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS SENSORS (
-        timestamp INT UNIQUE NOT NULL PRIMARY KEY,
-        cTemp REAL, pressurehPa REAL, soilmoisture REAL
-        );
-    """)
-    db.commit()
-    # HISTORY table holds weather/solar history data from API used to estimate ET and water deficit.
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS HISTORY (
-        date TEXT UNIQUE NOT NULL PRIMARY KEY,
-        windspeed REAL, solar REAL, tmax REAL, tmin REAL, rh REAL, pressure REAL, precip REAL, etcalc REAL             
-        );
-    """)
-    db.commit()
-    # SYSTEM table holds data on both zones and the system as a whole. Some columns are only for zone/system data.
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS SYSTEM (
-        id TEXT UNIQUE NOT NULL PRIMARY KEY,
-        zipcode INT, city TEXT, state TEXT, lat REAL, long REAL,
-        soiltype TEXT, planttype TEXT, microclimate TEXT, slope REAL,
-        waterSun INT, waterMon INT, waterTue INT, waterWed INT, waterThu INT, waterFri INT, waterSat INT,
-        pref_time_hrs TEXT, pref_time_min TEXT,
-        applicationrate REAL, waterdeficit REAL,
-        setup_complete INT
-        );
-    """)
-    db.commit()
-
-
-
 
 
 # op_menu() is the landing spot for operations.
@@ -83,19 +45,15 @@ def op_menu():
         op_menu()
 
 
-
 # my_system() displays basic system/zone data when requested from op_menu()
+# todo: these not returning config just set up
 def my_system():
-    db = sl.connect('my-data.db')
-    cursor = db.cursor()
-    cursor.execute("select city, state, zipcode from system where  id = 'system'")
-    systemdata = cursor.fetchone()
-    cursor.execute("select soiltype, applicationrate from system where  id = 'zone1'")
-    zonedata = cursor.fetchone()
+
 
     print("System Data:")
-    print("Location: {}, {}, {}" .format(systemdata[0], systemdata[1], systemdata[2]))
-    print("Zone 1 soil is primarily {}. Application rate is {} inches per hour." .format(zonedata[0], zonedata[1]))
+    print(f"Location: {my_sys.city}, {my_sys.state}, {my_sys.zipcode}")
+    print(f"Zone 1 soil is primarily {zone1.soil_type}. "
+          f"Application rate is {zone1.application_rate} inches per hour.")
     input("Press any key to continue.")
     op_menu()
 
@@ -139,83 +97,82 @@ def my_schedule():
 
 
 def startup():
+
     print('Excellent choice, sir. Startup protocol initiated.')
 
     # Get location data from IP address:
     loc = requests.get('http://ipapi.co/json/?key=H02y7T8oxOo7CwMHhxvGDOP7JJqXArMPjdvMQ6XhA6X4aR4Tub').json()
-    city, state, zipcode, lat, long = loc['city'], loc['region_code'], loc['postal'], loc['latitude'], loc['longitude']
-    print("We think you're in {}, {} {}" .format(city, state, zipcode))
-    print("Lat/long: {}, {}" .format(lat, long))
-    print("For now, we'll assume that's all true.")
 
     # enter location into system database:
-    db = sl.connect('my-data.db')
-    cursor = db.cursor()
-    cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, city, state, zipcode, lat, long) VALUES('system', ?,?,?,?,?)", (city, state, zipcode, lat, long))
-    db.commit()
+    my_sys.city, my_sys.state, my_sys.zipcode, my_sys.lat, my_sys.long = \
+        loc['city'], loc['region_code'], loc['postal'], loc['latitude'], loc['longitude']
 
-    # get historical weather / solar data, build database. This does the past week as a starting point for a water deficit.
-    gethistoricaldata(days = 7)
+    db.add(my_sys)  # add/update object
+
+    print(f"We think you're in {my_sys.city}, {my_sys.state} {my_sys.zipcode}")
+    print(f"Lat/long: {my_sys.lat}, {my_sys.long}")
+    print("For now, we'll assume that's all true.")
+
+    # get historical weather / solar data, build database.
+    # This does the past week as a starting point for a water deficit.
+    history_items_list = gethistoricaldata(days=7, latitude=my_sys.lat, longitude=my_sys.long)
     print("Database of historical environmental data built.")
 
     # build system info:
     print("Lets talk about Zone 1, since this is a limited prototype and all.")
-    soiltype = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or ""'loamy']")
-    while soiltype != ("sandy" or "loamy"):
-        soiltype = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or loamy?")
-    cursor.execute("INSERT OR IGNORE INTO SYSTEM(id, soiltype) VALUES('zone1', ?)", (soiltype,))
-    db.commit()
+    soil_type = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or ""'loamy']")
+    while soil_type != ("sandy" or "loamy"):
+        soil_type = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or loamy?")
+
+    zone1.soil_type = soil_type
+
 
     # TECHNICAL DEBT! improve user selection of watering days and times.
-    if soiltype == 'sandy':
+    if soil_type == 'sandy':
         print("Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy.")
         print("Three days a week should do nicely. Lets say Mon-Weds-Fri for now.")
-        cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,1,0,1,0,1,0, 'zone1'))
-        db.commit()
-    elif soiltype == 'loamy':
+
+        zone1.waterSun, zone1.waterMon, zone1.waterTue, zone1.waterWed, zone1.waterThu, zone1.waterFri, zone1.waterSat\
+            = 0, 1, 0, 1, 0, 1, 0
+
+    elif soil_type == 'loamy':
         print("Your loamy soil will hold water well. We recommend picking one watering day a week.")
         print("We'll make it easy and pick Wednesday for now.")
-        cursor.execute("UPDATE SYSTEM SET waterSun = ?, waterMon = ?, waterTue = ?, waterWed = ?, waterThu = ?, waterFri = ?, waterSat = ? WHERE id = ?", (0,0,0,1,0,0,0, 'zone1'))
-        db.commit()
+        zone1.waterSun, zone1.waterMon, zone1.waterTue, zone1.waterWed, zone1.waterThu, zone1.waterFri, zone1.waterSat \
+            = 0, 0, 0, 1, 0, 0, 0
 
     # TECHNICAL DEBT! Prototype doesn't allow changing the time of day for watering.
-    cursor.execute("UPDATE SYSTEM SET applicationrate = 1.5, pref_time_hrs = '09', pref_time_min = '00' WHERE id = 'zone1'")
-    db.commit()
+    zone1.application_rate = 1.5
+    zone1.pref_time_hrs = '09'
+    zone1.pref_time_min = '00'
 
     print("Okay, it looks like we have everything we need to calculate your water needs. We'll do that now.")
     waterdeficit = 0
     for x in range(7):
-        date = (datetime.date.today() - datetime.timedelta(days=x+1)).strftime("%Y%m%d")
-        waterdeficit += et_calculations(date)
-    cursor.execute("UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
-    db.commit()
+        waterdeficit += history_items_list[x].etcalc
 
     print("Now to account for accumulated precipitation...")
     for x in range(7):
-        date = (datetime.date.today() - datetime.timedelta(days=x + 1)).strftime("%Y%m%d")
-        db = sl.connect('my-data.db')  # connect to database for historical data
-        cursor = db.cursor()
-        cursor.execute("select precip from history where date = ?", (date,))
-        precip = cursor.fetchone()
-        waterdeficit -= precip[0]
-        cursor.execute(
-            "UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
-        db.commit()
+        waterdeficit -= history_items_list[x].precip
+
+    zone1.water_deficit = waterdeficit
+    db.add(zone1)  # add/update object
+
 
 # TECHNICAL DEBT - how much did you water your lawn over the past week?
 
-    water_algo()
+    water_algo(zone1)
     print("Beep...Bop...Boop...")
     print("Judging by the past week, you have a total water deficit of {} inches." .format(str(waterdeficit)))
 
-    cursor.execute(
-        "UPDATE SYSTEM SET setup_complete = 1 WHERE id = 'system'")
-    db.commit()
 
     print("Creating recurring tasks...")
-    task_scheduler()
+    # todo off for desktop testing
+    # task_scheduler()
 
     print("Setup complete. Redirecting to main menu.")
+    my_sys.setup_complete = True
+    db.add(my_sys)
     op_menu()
 
 
@@ -233,6 +190,7 @@ def task_scheduler():
     print(schedule)
     return
 
+
 def application_rate_cal():
     print("Lets get calibrating! We'll only do zone 1 today (since I'm only a prototype and all).")
     print("Here are the instructions for calibration.")
@@ -240,17 +198,19 @@ def application_rate_cal():
     print("...") # Insert instructions here
     print("...") # Insert instructions here
     new_application_rate = input("Now, enter your new application rate in inches per hour (as an integer or decimal value): ")
-    db = sl.connect('my-data.db')  # connect to database for historical data
-    cursor = db.cursor()
-    cursor.execute(
-        "UPDATE SYSTEM SET applicationrate = ? WHERE id = 'zone1'", (new_application_rate,))
-    db.commit()
+
+    # look to db for a zone 1 config, if none add it, if there update it
+    zone_1 = db.get(SystemZoneConfig, "zone1")
+    zone_1.application_rate = new_application_rate
+    db.add(zone1)  # add/update object
+
     op_menu()
 
 
 def raspi_testing():
-    schedule = Schedule()
-    sense = Sensors()
+    # todo figure prevent error without source
+    schedule = ()  # Schedule()
+    sense = ()  # Sensors()
     baro_data = sense.baro()
     soil_data = sense.soil()
     sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
@@ -269,7 +229,7 @@ def raspi_testing():
         print("Barometric pressure: ", sensor_data[2])
         print("Soil moisture: ", sensor_data[3])
     elif choice == '2':
-        System.Zone.manual_control()
+        pass  # System.Zone.manual_control()
     elif choice == '3':
         startup()
     else:
@@ -283,20 +243,23 @@ def raspi_testing():
 #                 (main)                     #
 #                                            #
 ##############################################
+db = DBManager()
+db.start_databases()
 
-start_databases()
 
-db = sl.connect('my-data.db')  # connect to database for historical data
-cursor = db.cursor()
-cursor.execute("select setup_complete from system where id = 'system'")
-startup_complete = cursor.fetchone()
-try:
-    if startup_complete[0] != True:
-        print("---Not first startup---\n")
-        if on_raspi:
-            raspi_testing()
-    else:
-        op_menu()
-except:
+my_sys = db.get(SystemZoneConfig, "system")
+
+zone1 = db.get(SystemZoneConfig, "zone1")
+
+if on_raspi:
+    raspi_testing()
+
+if my_sys.setup_complete:
+    print("---Not first startup---\n")
+    op_menu()
+else:
     print("First startup! Welcome.")
     startup()
+
+
+

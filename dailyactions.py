@@ -8,17 +8,21 @@ import sqlite3 as sl
 import time
 import requests
 import json
-import datetime
+from datetime import date, datetime
 from crontab import CronTab
+
+from db_manager import DBManager
+from models import SensorEntry, SystemZoneConfig, HistoryItem
 
 # this try/except lets code function outside of raspberry pi for development.
 try:
     import smbus
     import busio
     from board import SCL, SDA
-    from adafruit_seesaw.seesaw import Seesaw
+    from Adafruit_Seesaw.seesaw import Seesaw
 except:
     pass
+
 
 #####################################
 #    BME280 sensor functionality    #
@@ -147,6 +151,7 @@ def soil():
     soilmoisture = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
     return soilmoisture
 
+
 # TODO: Read ADC.
 ################################
 #   ADC module functionality   #
@@ -154,36 +159,46 @@ def soil():
 def adc(): # currently working in adcsource.py
     pass
 
+
 #############################################################################
 #    Queries APIs weather/solar data and dumps it into db table "HISTORY"   #
 #############################################################################
-def gethistoricaldata(days): # "days" arg determines number of days
-    print("gethistoricaldata() has begun")
-    def getsolar(lat, long):  # pulls solar data
+def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list[HistoryItem]:
+    """Returns list of HistoryItems, one for each of preceding given days [Int] at given lat [Float], long [Float]."""
+
+    print(f"gethistoricaldata({days}) has begun")
+
+    def getsolar(lat_s, long_s):  # pulls solar data
         apikey, payload, headers = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ", {}, {}
         hours = 168
-        url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat, long, hours)
+        url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat_s, long_s, hours)
         response = requests.request("GET", url, headers=headers, data=payload)
-        return json.loads(response.text)# pulls solar data
+        return json.loads(response.text)  # pulls solar data
 
-    def getweather(lat, long):
-        window = days * 24 * 60 * 60 + 86400 # seconds in a day, plus a one-day buffer.
+    def getweather(lat_w, long_w):
+        window = days * 24 * 60 * 60  # seconds in a day, api max 7 days - most recent 7 to match solar data
         appid = "ae7cc145d2fea84bea47dbe1764f64c0"
         start = round(time.time()-window)
         end = round(time.time())
+        print(f'lat: {lat_w}, long: {long_w}, start: {start}, stop: {end}')
+        # url = f"http://history.openweathermap.org/data/2.5/history/city?lat={lat_w}&lon={long_w}&start={start}&end={end}&appid={appid}"
         url = "http://history.openweathermap.org/data/2.5/history/city?lat={}&lon={}&start={}&end={}&appid={}" \
-            .format(lat, long, start, end, appid)
+            .format(lat_w, long_w, start, end, appid)
         payload, headers = {}, {}
         response = requests.request("GET", url, headers=headers, data=payload)
         return json.loads(response.text)  # pulls weather data
 
-    def parseweather(lat, long):  # parses weather data pulled from getweather()
-        db = sl.connect('my-data.db')
-        data = getweather(lat, long)
+    def parseweather(lat_pw, long_pw) -> list[HistoryItem]:  # parses weather data pulled from getweather()
+        """Returns list of HistoryItems populated with weather data (missing solar)"""
+        weather_history_list = []
+
+        data = getweather(lat_pw, long_pw)
+        print(f'weather data: {data}')
         temp, dailydata = [], []
         for x in data['list']:
-            timestamp = datetime.datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d%H')
-            date = datetime.datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d')
+            timestamp = datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d%H')
+            date_pw = date.fromtimestamp(int(x['dt']))
+            # print(f'date_pw: {date_pw}')
             windspeed = x['wind']['speed']
             pressure = x['main']['pressure']
             humidity = x['main']['humidity']
@@ -193,14 +208,15 @@ def gethistoricaldata(days): # "days" arg determines number of days
                 precip = x['rain']['1h']
             except:
                 precip = 0
-            entry = [[timestamp], [date], [windspeed], [pressure], [humidity], [temp_min], [temp_max], [precip]]
+            entry = [timestamp, date_pw, windspeed, pressure, humidity, temp_min, temp_max, precip]
+            # print(f'entry: {entry}')
             temp.append(entry)
 
         # combines hourly data into min/max or avg daily values
-        avgwind, avgpres, avghum = float(temp[0][2][0]), float(temp[0][3][0]), float(temp[0][4][0])
-        temp_min, temp_max = float(temp[0][5][0]), float(temp[0][6][0])
+        avgwind, avgpres, avghum = float(temp[0][2]), float(temp[0][3]), float(temp[0][4])
+        temp_min, temp_max = float(temp[0][5]), float(temp[0][6])
         try:
-            precip = float(temp[0][7][0])
+            precip = float(temp[0][7])
         except:
             precip = 0
         entrycounter = 1
@@ -208,28 +224,28 @@ def gethistoricaldata(days): # "days" arg determines number of days
         for x in range(len(temp)):
             try:
                 if x == (len(temp)-1):
-                    entry = [temp[x][1][0], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
+                    entry = [temp[x][1], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
                              temp_min-273.15, temp_max-273.15, precip / 25.4]
                     dailydata.append(entry)
                 elif temp[x][1] == temp[x+1][1]:
                     entrycounter += 1
-                    avgwind += float(temp[x+1][2][0])
-                    avgpres += float(temp[x+1][3][0])
-                    avghum += float(temp[x+1][4][0])
-                    temp_min = min(temp_min, float(temp[x][5][0]), float(temp[x+1][5][0]))
-                    temp_max = max(temp_max, float(temp[x][6][0]), float(temp[x+1][6][0]))
+                    avgwind += float(temp[x+1][2])
+                    avgpres += float(temp[x+1][3])
+                    avghum += float(temp[x+1][4])
+                    temp_min = min(temp_min, float(temp[x][5]), float(temp[x+1][5]))
+                    temp_max = max(temp_max, float(temp[x][6]), float(temp[x+1][6]))
                     try:
-                        precip += float(temp[x+1][7][0])
+                        precip += float(temp[x+1][7])
                     except:
                         precip = 0
                 else:
-                    entry = [temp[x][1][0], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
+                    entry = [temp[x][1], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
                              temp_min - 273.15, temp_max - 273.15, precip / 25.4]
                     dailydata.append(entry)
-                    avgwind, avgpres, avghum = float(temp[x+1][2][0]), float(temp[x+1][3][0]), float(temp[x+1][4][0])
-                    temp_min, temp_max = float(temp[x+1][5][0]), float(temp[x+1][6][0])
+                    avgwind, avgpres, avghum = float(temp[x+1][2]), float(temp[x+1][3]), float(temp[x+1][4])
+                    temp_min, temp_max = float(temp[x+1][5]), float(temp[x+1][6])
                     try:
-                        precip = float(temp[x+1][7][0])
+                        precip = float(temp[x+1][7])
                     except:
                         precip = 0
                     entrycounter = 1
@@ -237,31 +253,41 @@ def gethistoricaldata(days): # "days" arg determines number of days
                 print("Exception occurred while parsing historical weather data.")
                 pass
 
-        # makes entries into HISTORY table of database
         for x in range(len(dailydata)):
-            cursor = db.cursor()
-            cursor.execute('''INSERT OR IGNORE INTO HISTORY(date, windspeed, pressure, rh, tmin, tmax, precip) VALUES(?,?,?,
-            ?,?,?,?)''', (dailydata[x][0], dailydata[x][1], dailydata[x][2], dailydata[x][3], dailydata[x][4],
-                        dailydata[x][5], dailydata[x][6]))
-            db.commit()
+            new_day = HistoryItem()
+            new_day.date = dailydata[x][0]
+            print(f'new_day.date: {new_day.date}')
+            new_day.windspeed = dailydata[x][1]
+            new_day.pressure = dailydata[x][2]
+            new_day.rh = dailydata[x][3]
+            new_day.tmin = dailydata[x][4]
+            new_day.tmax = dailydata[x][5]
+            new_day.precip = dailydata[x][6]
+            weather_history_list.append(new_day)
 
-    def parsesolar(lat, long):
+        return weather_history_list
+
+    def parsesolar(lat_ps: float, long_ps: float, wl: list[HistoryItem]) -> list[HistoryItem]:
         print("parsesolar() begins.")
-        db = sl.connect('my-data.db')  # connection to DB
+
+        wl_ps = wl
+
         # opens solar data file
-        with open('data/solardata.json') as f:
+        with open('data/solar_sample_data.json') as f:
             data = json.load(f)
         print("file has been opened.")
         # limit use of getsolar() - we only get 10 API calls per day.
-        data = getsolar(lat, long)
+        # data = getsolar(lat_ps, long_ps)
 
         dailydata = []
         temp = []
-        print("length: ", len(data))
+        # print("solar length: ", len(data))
+        print(f'solar data: {data}')
 
         for x in data['estimated_actuals']:
-            date = x['period_end'][0:10].replace('-', '')
-            entry = [date, x['ghi']]
+            # date = x['period_end'][0:10].replace('-', '')
+            entry_date = datetime.fromisoformat(x['period_end'][:-2]).date()
+            entry = [entry_date, x['ghi']]
             temp.append(entry)
 
 
@@ -285,38 +311,42 @@ def gethistoricaldata(days): # "days" arg determines number of days
                 print("Exception occurred while parsing historical solar data.")
                 pass
 
-        print("solar value length: ",len(entry))
+        print("solar value length: ", len(entry))
+        # for each history item find entry w/ matching date in dailydata and update history item solar value
+        for history_item in wl_ps:
+            wl_date = history_item.date
+            print(f'wl_date: {wl_date}')
+            print(f'dailydata:{dailydata}')
+            matching_list = list(filter(lambda e: e[0] == wl_date, dailydata))
+            if len(matching_list) >= 1:
+                history_item.solar = matching_list[0][1]
+            print(history_item)
 
-        for x in range(len(dailydata)):
-            cursor = db.cursor()
-            cursor.execute("UPDATE HISTORY SET solar = ? WHERE date = ?", (dailydata[x][1], dailydata[x][0]))
-        db.commit()
+        return wl_ps
 
-    db = sl.connect('my-data.db')
-    cursor = db.cursor()
-    cursor.execute("select lat, long from system where id = 'system'")
-    data = cursor.fetchone()
-    lat, long = data[0], data[1]
+    weather_list = parseweather(latitude, longitude)
+    weather_solar_list = parsesolar(latitude, longitude, weather_list)   # Queries APIs weather/solar data and dumps it into db table "HISTORY"
+    final_list = []
+    for item in weather_solar_list:
+        final_list.append(et_calculations(item))
+    return final_list
 
-    parseweather(lat, long)
-    parsesolar(lat, long)   # Queries APIs weather/solar data and dumps it into db table "HISTORY"
 
 ############################################################################
 #    calculates ET for a given date based on weather history data in db    #
 ############################################################################
-def et_calculations(date):  # string passed determines what day ET is evaluated for
-    db = sl.connect('my-data.db')  # connect to database for historical data
-    cursor = db.cursor()
-    cursor.execute("select * from history where date = ?", (date,))
-    dbdata = cursor.fetchone()
-
-    wind = dbdata[1]  # wind - meters per second,
+def et_calculations(h_i: HistoryItem) -> HistoryItem:  # string passed determines what day ET is evaluated for
+    """Takes a HistoryItem, returns HistoryItem with etcalc for given windspeed, solar, tmax, tmin, rh, and pressure."""
+    # todo: check these have reasonable values
+    history_item = h_i
+    wind = history_item.windspeed  # wind - meters per second,
     # stretch: account for longwave solar radiation
-    solar = dbdata[2]  # shortwave solar radiation in  MJ / (m^2 * d)
-    T_max = dbdata[3]  # daily max temp in Celsius
-    T_min = dbdata[4]  # daily min temp in Celsius
-    rh = dbdata[5] / 100  # daily average relative humidity as a decimal
-    pressure = dbdata[6] / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
+    solar = history_item.solar  # shortwave solar radiation in  MJ / (m^2 * d)
+    T_max = history_item.tmax  # daily max temp in Celsius
+    T_min = history_item.tmin  # daily min temp in Celsius
+
+    rh = history_item.rh / 100  # daily average relative humidity as a decimal
+    pressure = history_item.pressure / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
 
     # daily mean air temp in Celsius:
     T = (T_max + T_min) / 2
@@ -339,49 +369,43 @@ def et_calculations(date):  # string passed determines what day ET is evaluated 
     et_den = delta + psycho * (1 + C_d * wind)
 
     etmm = et_num / et_den  # millimeters per day
-    et = etmm / 25.4 # inches per day
+    et = etmm / 25.4  # inches per day
 
-    # enters calculated ET into HISTORY database
-    cursor = db.cursor()
-    cursor.execute("UPDATE HISTORY SET etcalc = ? WHERE date = ?", (et, date))
-    db.commit()
-
-    cursor = db.cursor()
-    cursor.execute("select * from history where date = ?", (date,))
-    dbdata = cursor.fetchone()
-    print("et_calculations - dbdata: ", dbdata)
-    return et
+    history_item.etcalc = et
+    return history_item
 
 
 # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
-def water_algo():
-    db = sl.connect('my-data.db')
-    cursor = db.cursor()
-    cursor.execute("SELECT \
-                   applicationrate, waterdeficit, waterSun, waterMon, waterTue, waterWed, waterThu, waterFri, waterSat, \
-                   pref_time_hrs, pref_time_min \
-                   FROM system WHERE id = 'zone1'")
-    waterdata = cursor.fetchone()
+def water_algo(zone1):
+    waterdata = zone1
     watering_days = []
-    if waterdata[2]==1: watering_days.append("SUN")
-    if waterdata[3]==1: watering_days.append("MON")
-    if waterdata[4]==1: watering_days.append("TUE")
-    if waterdata[5]==1: watering_days.append("WED")
-    if waterdata[6]==1: watering_days.append("THU")
-    if waterdata[7]==1: watering_days.append("FRI")
-    if waterdata[8]==1: watering_days.append("SAT")
+    if waterdata.waterSun == 1:
+        watering_days.append("SUN")
+    if waterdata.waterMon == 1:
+        watering_days.append("MON")
+    if waterdata.waterTue == 1:
+        watering_days.append("TUE")
+    if waterdata.waterWed == 1:
+        watering_days.append("WED")
+    if waterdata.waterThu == 1:
+        watering_days.append("THU")
+    if waterdata.waterFri == 1:
+        watering_days.append("FRI")
+    if waterdata.waterSat == 1:
+        watering_days.append("SAT")
 
     # TECHNICAL DEBT! Prototype only accounts for rotary sprinklers
     emitterefficiency = {"rotary": 0.7}
-    effectiveapplicationrate = waterdata[0] * emitterefficiency["rotary"]
-    req_watering_time = (waterdata[1] / effectiveapplicationrate) * 60  # total number of minutes needed
+    effectiveapplicationrate = waterdata.application_rate * emitterefficiency["rotary"]
+    req_watering_time = (waterdata.water_deficit / effectiveapplicationrate) * 60  # total number of minutes needed
     session_time = req_watering_time / len(watering_days)  # number of minutes per watering session
-    water_scheduler(
-        zoneid = "zone1",
-        days = watering_days,
-        duration = session_time,
-        pref_time_hrs = waterdata[9],
-        pref_time_min = waterdata[10])
+    # todo: off for desktop testing
+    # water_scheduler(
+    #     zoneid="zone1",
+    #     days=watering_days,
+    #     duration=session_time,
+    #     pref_time_hrs=waterdata.pref_time_hrs,
+    #     pref_time_min=waterdata.pref_time_min)
     return session_time
 
 
@@ -401,6 +425,7 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         print("task {} created" .format(x))
     input("All tasks created. Press enter to continue.")
 
+
 ##############################################
 #                                            #
 #                 IT BEGINS.                 #
@@ -408,36 +433,33 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
 #                                            #
 ##############################################
 
-choice = sys.argv[0]
+db = DBManager()
+db.start_databases()
 
-db = sl.connect('my-data.db')
-cursor = db.cursor()
+choice = sys.argv[0]
 
 if choice == "readsensors":
     soil = soil()   # value between [200, 2000]
     baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
-    cursor.execute("INSERT OR IGNORE INTO HISTORY(timestamp, cTemp, pressurehPa, soilmoisture) VALUES(?,?,?,?)", (time.time(), baro[0], baro[2], soil))
-    db.commit()
+    sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil)
+    db.add(sample)
 
 elif choice == "dailyupdate":
     # TODO: daily weather history updates / ET recalculations
     # TODO: rework watering tasks pursuant to ET recalculations
 
-    cursor.execute("select waterdeficit from system where id = 'system'")
-    data = cursor.fetchone()
-    waterdeficit = data[0]
+    my_sys = db.get(SystemZoneConfig, "system")
+    zone1 = db.get(SystemZoneConfig, "zone1")
 
-    gethistoricaldata(days = 1)
-    waterdeficit += et_calculations((datetime.date.today()).strftime("%Y%m%d"))
+    waterdeficit = my_sys.water_deficit
 
-    date = (datetime.date.today()).strftime("%Y%m%d")
-    db = sl.connect('my-data.db')  # connect to database for historical data
-    cursor = db.cursor()
-    cursor.execute("select precip from history where date = ?", (date,))
-    precip = cursor.fetchone()
+    today_history_item = gethistoricaldata(latitude=my_sys.lat, longitude=my_sys.long)[0]
+
+    waterdeficit += today_history_item.etcalc
+
+    precip = today_history_item.precip
     waterdeficit -= precip[0]
-
-    cursor.execute("UPDATE SYSTEM SET waterdeficit = ? WHERE id = ?", (waterdeficit, 'zone1'))
-    db.commit()
+    my_sys.water_deficit = waterdeficit
+    db.add(my_sys)
 
     water_algo()
