@@ -13,7 +13,6 @@ class DBManager:
     def start_databases(self):
         """ Initializes database from models, creates tables if not present."""
         Base.metadata.create_all(self.engine)
-        print(self.get(SystemZoneConfig, "system").setup_complete)
         if not self.get(SystemZoneConfig, "system"):
             self.setup_system()
 

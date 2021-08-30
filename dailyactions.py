@@ -4,7 +4,6 @@
 ##############################################################
 
 import sys
-import sqlite3 as sl
 import time
 import requests
 import json
@@ -376,8 +375,9 @@ def et_calculations(h_i: HistoryItem) -> HistoryItem:  # string passed determine
 
 
 # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
-def water_algo(zone1):
-    waterdata = zone1
+def water_algo(zone: SystemZoneConfig) -> float:
+    """Calls water_scheduler with attributes from given zone [SystemZoneConfig]. Then outputs session time [float]."""
+    waterdata = zone
     watering_days = []
     if waterdata.waterSun == 1:
         watering_days.append("SUN")
