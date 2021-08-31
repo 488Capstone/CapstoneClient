@@ -259,3 +259,17 @@ if my_sys.setup_complete:
 else:
     print("First startup! Welcome.")
     startup()
+
+# Todo: meet water sense 'capability requirements' for controllers per WaterSense Spec V1.0 Feb2021:
+# -  preserve settins when power lost without external battery backup
+# -  zone programming or zone scheduling
+# -  indicate to user when not receiving sensor input -> sensor_good
+# -  capable of interfacing with rainfall device
+# -  accomodate water restrictions:
+#     -  days of week, any two days, any single day
+#     -  even day or odd days or intervals from two to seven days
+#     -  set time of watering / prohibited times
+#     -  complete shutoff on/off
+# - percent water budget feature - adjust all watering up or down by percent with one setting
+# -  revert to percent adjust feature if sensor signal lost
+# -  allow manual operation test cycle but automatically return to auto

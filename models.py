@@ -88,6 +88,7 @@ class SystemOpState(Base):
     manual_water_off = Column(Boolean)
     manual_on_grid = Column(Boolean)
     has_internet = Column(Boolean)
+    sensor_good = Column(Boolean)
 
     battery_drain_rate = Column(Float)  # calc
     water_applied_amt = Column(Float)  # calc - inH2O applied this session
