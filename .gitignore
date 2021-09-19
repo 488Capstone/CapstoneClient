@@ -4,6 +4,7 @@ certs/
 *.db
 /test_db
 /my_data
+my_data
 
 *.log
 env/*
@@ -13,3 +14,5 @@ env
 *.swp
 /.idea/dataSources.local.xml
 /.idea/dataSources.xml
+
+*egg-info

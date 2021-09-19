@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from models import Base, SystemZoneConfig, SensorEntry, HistoryItem
+from capstoneclient.models import Base, SystemZoneConfig, SensorEntry, HistoryItem
 
 
 class DBManager:

@@ -1,5 +1,5 @@
 #import sqlite3
-from CapstoneClient.db_manager import DBManager
+from capstoneclient.db_manager import DBManager
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext

@@ -33,12 +33,13 @@ if [[ ${SIO_DEV_MODE} > 0 ]] ; then
 fi
 
 
-# if the database doesn't exist yet, initialize it
-dbFile="${SIOclientDir}/webgui/instance/${FLASK_APP}.sqlite"
-if [[ ! -e ${dbFile} ]] ; then
-	echo "Database file not found, initializing at location: $dbFile"
-	flask init-db
-fi
+# This is handled in the db_manager now I think
+## if the database doesn't exist yet, initialize it
+#dbFile="${SIOclientDir}/webgui/instance/${FLASK_APP}.sqlite"
+#if [[ ! -e ${dbFile} ]] ; then
+#	echo "Database file not found, initializing at location: $dbFile"
+#	flask init-db
+#fi
 
 if [[ ${SIO_LAN_SITE} > 0 ]] ; then
 	echo "Website available on WIFI network"
