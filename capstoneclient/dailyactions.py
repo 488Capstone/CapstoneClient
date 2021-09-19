@@ -446,9 +446,9 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
     setRealSched = 0
     if on_raspi:
-        command_string = "cd {}; ./zone_control.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+        command_string = "cd {}; ./capstoneclient/zone_control.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
     else:
-        command_string = "cd {}; ./zone_control_devmode.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+        command_string = "cd {}; ./capstoneclient/zone_control_devmode.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
     
     if setRealSched:
         for x in range(len(days)):
