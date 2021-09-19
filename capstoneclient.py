@@ -4,14 +4,17 @@
 # this script contains setup and operation of the device.           #
 #####################################################################
 
+import os
 import sys
 import requests
 from crontab import CronTab
+from cron_descriptor import get_description
 import datetime
-from dailyactions import gethistoricaldata, water_algo
+from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME
 from db_manager import DBManager
 from models import SystemZoneConfig
 
+DWDBG = False
 
 # todo: maybe environment variable
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
@@ -21,6 +24,7 @@ try:
 except:
     input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
     on_raspi = False
+    DWDBG = True
 
 
 # op_menu() is the landing spot for operations.
@@ -33,7 +37,11 @@ def op_menu():
     print("3. Application Rate Calibration")
     print("4. Settings [coming soon]")
     print("5. Water budgeting [coming soon]")
+    print("0. Exit")
     choice = input("Choose wisely. ")
+    if choice == '0': 
+        print("Exiting program")
+        exit()
     if choice == '1': my_system()
     elif choice == '2': my_schedule()
     elif choice == '3': application_rate_cal()
@@ -66,7 +74,7 @@ def my_schedule():
 
     # dump every ZoneControl task into days array:
     for tasks in schedule:
-        if tasks.comment == "ZoneControl":                                                                             #
+        if tasks.comment == ZONE_CONTROL_COMMENT_NAME:
             days.append([str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])])                      #
                                                                                                                        #
     # parse days array into usable strings:
@@ -167,8 +175,7 @@ def startup():
 
 
     print("Creating recurring tasks...")
-    # todo off for desktop testing
-    # task_scheduler()
+    task_scheduler()
 
     print("Setup complete. Redirecting to main menu.")
     my_sys.setup_complete = True
@@ -178,16 +185,41 @@ def startup():
 
 def task_scheduler():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    clientDir = os.getenv('SIOclientDir')
+    if clientDir is not None:
+        commentText = "SIO-LogFileReset"
+        schedule.remove_all(comment=commentText)
+        log_update = schedule.new(command="cd {0} ; mv {1} {1}_last ".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+        commentText = "SIO-Daily"
+        schedule.remove_all(comment=commentText)
+        daily_update = schedule.new(command="cd {0} ; ./dailyactions.py dailyupdate >> {} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+        if not DWDBG:
+            #normal operation
+            #every day at 3am
+            daily_update.setall('0 3 * * *')
+            log_update.setall('0 3 * * *')
+        else:
+            #every 10min
+            daily_update.setall('*/10 * * * *')
+            log_update.setall('*/10 * * * *')
 
-    daily_update = schedule.new(command="./dailyactions.py dailyupdate", comment="Recurring")
-    daily_update.setall('0 3 * * *')
+        if on_raspi == True:
+            #normal operation
+            commentText = "SIO-Sensors"
+            schedule.remove_all(comment=commentText)
+            sensor_query = schedule.new(command="cd {0} ; ./dailyactions.py readsensors >> {} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+            sensor_query.setall('*/5 0 0 0 0')
+        else:
+            commentText = "SIO-DEV"
+            schedule.remove_all(comment=commentText)
+            dev_mode = schedule.new(command="cd {0} ; ./dailyactions.py DEV >> {} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+            # every 1 minute
+            dev_mode.setall('*/1 * * * *')
 
-    if on_raspi == True:
-        sensor_query = schedule.new(command="./dailyactions.py readsensors", comment="Recurring")
-        sensor_query.setall('*/5 0 0 0 0')
-
-    schedule.write()
-    print(schedule)
+        schedule.write()
+        print(schedule)
+    else:
+        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
     return
 
 
@@ -208,6 +240,7 @@ def application_rate_cal():
 
 
 def raspi_testing():
+    #TODO DW I'm not sure what Collin meant with this below comment?
     # todo figure prevent error without source
     schedule = ()  # Schedule()
     sense = ()  # Sensors()
@@ -220,8 +253,11 @@ def raspi_testing():
     print("1: Check sensor readings.")
     print("2: Manual zone control.")
     print("3: First startup simulation")
+    print("0. Exit")
     choice = input("Choose wisely. ")
-
+    if choice == '0': 
+        print("Exiting program")
+        exit()
     if choice == '1':
         print("Sensor data:")
         print("Timestamp: ", sensor_data[0])

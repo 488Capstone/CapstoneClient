@@ -2,30 +2,26 @@
 # TODO: functionality: manual override by user command
 # (eg. if duration='user' then do something different)
 
-import RPi.GPIO as GPIO
 from datetime import datetime
 import time
 import sys
 
-print("{}---zone_control.py:: {} {}".format(str(datetime.now()), sys.argv[1], sys.argv[2]))
+print("{}---zone_control_devmode.py:: {} {}".format(str(datetime.now()), sys.argv[1], sys.argv[2]))
+
 # CLI: > ./zone_control.py ['zone1'] [duration]
+#TODO dict lookup for zones (from db I guess)
 #  zone = sys.argv[1]  # would need a dict lookup here if multiple zones were being implemented
 zone = 21  # GPIO29, arbitrary choice
 duration = sys.argv[2]
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(zone, GPIO.OUT)
-
 # script needs to take command line argument “duration” - sprinkle time in minutes
-
-duration = int(duration) * 60  # puts duration into seconds
+duration = int(float(duration)) # puts duration into seconds #DW for developer mode we're going to accelerate all actions. so lets make minutes==seconds
 start_time = time.time()
-print("{}---zone_control.py:: Zone1(pin{}) ENABLED".format(str(datetime.now()),zone))
-GPIO.output(zone, GPIO.HIGH)
+print("{}---zone_control_devmode.py:: Zone1(pin{}) ENABLED".format(str(datetime.now()),zone))
 elapsed_time = time.time() - start_time
 while duration > elapsed_time:
     time.sleep(1)
     elapsed_time = time.time() - start_time
-print("{}---zone_control.py:: Zone1(pin{}) DISABLED".format(str(datetime.now()),zone))
-GPIO.output(zone, GPIO.LOW)
+
+print("{}---zone_control_devmode.py:: Zone1(pin{}) DISABLED".format(str(datetime.now()),zone))
 sys.exit()

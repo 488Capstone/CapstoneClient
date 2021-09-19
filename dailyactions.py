@@ -1,8 +1,10 @@
+#!/usr/bin/python3
 ##############################################################
 #  this script will be run as a crontab scheduled event,     #
 #  or during startup by importing to capstoneclient.py       #
 ##############################################################
 
+import os
 import sys
 import time
 import requests
@@ -13,6 +15,10 @@ from crontab import CronTab
 from db_manager import DBManager
 from models import SensorEntry, SystemZoneConfig, HistoryItem
 
+ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
+LOG_FILE_NAME = './client_dev.log'
+
+on_raspi = True
 # this try/except lets code function outside of raspberry pi for development.
 try:
     import smbus
@@ -20,8 +26,30 @@ try:
     from board import SCL, SDA
     from Adafruit_Seesaw.seesaw import Seesaw
 except:
-    pass
+    on_raspi = False
+    DWDBG = True
+ 
 
+# Debug mode variable used to enable additional print statements 
+DWDBG = False 
+DWDBG = True
+#DWDBG = 10 # set DWDBG to a number to change the amount of print statements! scale of 0-10, 10 being the most 
+# 1 means print statements that print maybe 1-2 lines. If the number is higher, expect more prints 
+################################################################################ 
+# The below function is a convenience function used during debug to test the  
+# values of expressions/variables periodically throughout the code. When DWDBG 
+# is false it will do nothing. 
+# DW 2021-06-26-10:17 - found a problem, eval() only works with globals. -Fixed, used stack frame info from 1 stack above current level 
+################################################################################ 
+if DWDBG: 
+    def probe(expr): 
+        frame = sys._getframe(1) 
+        evalval = repr(eval(expr,frame.f_globals, frame.f_locals)) 
+        print("***Probe: '{}' => '{}'".format(expr, evalval)) 
+else: 
+    # if we're not in a debug mode, just return safely! 
+    def probe(expr): 
+        return 0 
 
 #####################################
 #    BME280 sensor functionality    #
@@ -162,7 +190,7 @@ def adc(): # currently working in adcsource.py
 #############################################################################
 #    Queries APIs weather/solar data and dumps it into db table "HISTORY"   #
 #############################################################################
-def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list[HistoryItem]:
+def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> list[HistoryItem]:
     """Returns list of HistoryItems, one for each of preceding given days [Int] at given lat [Float], long [Float]."""
 
     print(f"gethistoricaldata({days}) has begun")
@@ -187,7 +215,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
         response = requests.request("GET", url, headers=headers, data=payload)
         return json.loads(response.text)  # pulls weather data
 
-    def parseweather(lat_pw, long_pw) -> list[HistoryItem]:  # parses weather data pulled from getweather()
+    def parseweather(lat_pw, long_pw): # -> list[HistoryItem]:  # parses weather data pulled from getweather()
         """Returns list of HistoryItems populated with weather data (missing solar)"""
         weather_history_list = []
 
@@ -264,7 +292,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
 
         return weather_history_list
 
-    def parsesolar(lat_ps: float, long_ps: float, wl: list[HistoryItem]) -> list[HistoryItem]:
+    def parsesolar(lat_ps: float, long_ps: float, wl: list): #-> list[HistoryItem]:
         print("parsesolar() begins.")
 
         wl_ps = wl
@@ -363,7 +391,9 @@ def et_calculations(h_i: HistoryItem) -> HistoryItem:  # string passed determine
     psycho = 0.000665 * pressure  # from ASCE standardized reference
     C_n = 900  # constant from ASCE standardized reference
     C_d = 0.34  # constant from ASCE standardized reference
-
+    if solar is None:
+        print("solar data was None. Setting to 1 to bypass issue")
+        solar = 1
     et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
     et_den = delta + psycho * (1 + C_d * wind)
 
@@ -399,13 +429,8 @@ def water_algo(zone: SystemZoneConfig) -> float:
     effectiveapplicationrate = waterdata.application_rate * emitterefficiency["rotary"]
     req_watering_time = (waterdata.water_deficit / effectiveapplicationrate) * 60  # total number of minutes needed
     session_time = req_watering_time / len(watering_days)  # number of minutes per watering session
-    # todo: off for desktop testing
-    # water_scheduler(
-    #     zoneid="zone1",
-    #     days=watering_days,
-    #     duration=session_time,
-    #     pref_time_hrs=waterdata.pref_time_hrs,
-    #     pref_time_min=waterdata.pref_time_min)
+
+    water_scheduler( zoneid="zone1", days=watering_days, duration=session_time, pref_time_hrs=waterdata.pref_time_hrs, pref_time_min=waterdata.pref_time_min)
     return session_time
 
 
@@ -413,17 +438,31 @@ def water_algo(zone: SystemZoneConfig) -> float:
 #    schedules watering events using crontab    #
 #################################################
 def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
+    currentDir = os.getcwd()
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    schedule.remove_all(comment='ZoneControl')
-    command_string = "./zone_control.py {} {}" .format(str(zoneid), str(duration))  # adds args to zone_control.py
-    for x in range(len(days)):
-        task = schedule.new(command=command_string, comment='ZoneControl')  # creates a new entry in the crontab
-        task.dow.on(days[x])  # day of week as per object passed to the method
-        task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
-        task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+    commentText = ZONE_CONTROL_COMMENT_NAME  
+    schedule.remove_all(comment=commentText)
+    #DW this var allows us to test the real schedule setting if we're in dev mode, if it remains 0 then we're in an accerated developer test mode
+    #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
+    setRealSched = 0
+    if on_raspi:
+        command_string = "cd {}; ./zone_control.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+    else:
+        command_string = "cd {}; ./zone_control_devmode.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+    
+    if setRealSched:
+        for x in range(len(days)):
+            task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
+            task.dow.on(days[x])  # day of week as per object passed to the method
+            task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
+            task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+            schedule.write()  # finalizes the task in the crontab
+            print("task {} created" .format(x))
+    else:
+        task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
+        task.setall('*/5 * * * *') # run every 5min
         schedule.write()  # finalizes the task in the crontab
-        print("task {} created" .format(x))
-    input("All tasks created. Press enter to continue.")
+
 
 
 ##############################################
@@ -432,34 +471,53 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
 #                 (main)                     #
 #                                            #
 ##############################################
+#DW 2021-09-18-16:28 need to add this in so 'import' doesnt run this code
+#   We only want this code running when the script is called standalone.
+if __name__ == "__main__":
+    db = DBManager()
+    db.start_databases()
 
-db = DBManager()
-db.start_databases()
+    #DW 2021-09-18-14:49 - Collin had this set as argv[0], but that would return the script name, wouldn't it? It was not working for me. Now this is working.
+    #DW the reason he had it set to 0 might be because when importing the file in capstoneclient.py it would throw and error if set to 1!
+    choice = sys.argv[1]
 
-choice = sys.argv[0]
+    #probe('choice')
+    #probe('logFile')
 
-if choice == "readsensors":
-    soil = soil()   # value between [200, 2000]
-    baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
-    sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil)
-    db.add(sample)
+    print("{}---dailyactions.py::{}".format(str(datetime.now()), choice))
 
-elif choice == "dailyupdate":
-    # TODO: daily weather history updates / ET recalculations
-    # TODO: rework watering tasks pursuant to ET recalculations
+    if choice == "readsensors":
+        soil = soil()   # value between [200, 2000]
+        baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
+        sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil)
+        db.add(sample)
 
-    my_sys = db.get(SystemZoneConfig, "system")
-    zone1 = db.get(SystemZoneConfig, "zone1")
+    elif choice == "dailyupdate":
+        # TODO: daily weather history updates / ET recalculations
+        # TODO: rework watering tasks pursuant to ET recalculations
+        #TODO make work with all zones
+        my_sys = db.get(SystemZoneConfig, "system")
+        zone1 = db.get(SystemZoneConfig, "zone1")
 
-    waterdeficit = my_sys.water_deficit
+        #TODO why is my_sys.water_deficit returning None?
+        waterdeficit = my_sys.water_deficit or 0.1
 
-    today_history_item = gethistoricaldata(latitude=my_sys.lat, longitude=my_sys.long)[0]
+        today_history_item = gethistoricaldata(latitude=my_sys.lat, longitude=my_sys.long)[0]
 
-    waterdeficit += today_history_item.etcalc
+        probe('waterdeficit')
+        probe('today_history_item.etcalc')
 
-    precip = today_history_item.precip
-    waterdeficit -= precip[0]
-    my_sys.water_deficit = waterdeficit
-    db.add(my_sys)
+        waterdeficit += today_history_item.etcalc
 
-    water_algo()
+        precip = today_history_item.precip
+        waterdeficit -= precip
+        my_sys.water_deficit = waterdeficit
+        db.add(my_sys)
+
+        #TODO really should make this loop through all available zones, and for prototype it'll only be 1 
+        water_algo(zone1)
+
+    elif choice == "DEV":
+        print("{}---DEV: test ".format(str(datetime.now())))
+      
+

@@ -1,0 +1,41 @@
+DROP TABLE IF EXISTS user;
+DROP TABLE IF EXISTS zones;
+DROP TABLE IF EXISTS schedule;
+DROP TABLE IF EXISTS assign_zone_sched;
+
+-- create table for our login uname & pw
+CREATE TABLE user (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL
+);
+
+--CREATE TABLE zones (
+--  id INTEGER PRIMARY KEY AUTOINCREMENT,
+--  author_id INTEGER NOT NULL,
+--  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  name TEXT NOT NULL,
+--  emitter TEXT NOT NULL,
+--  soil TEXT NOT NULL,
+--  plant TEXT NOT NULL,
+--  uclimate TEXT NOT NULL,
+--  slope TEXT NOT NULL,
+--);
+--
+--CREATE TABLE schedule (
+--  id INTEGER PRIMARY KEY AUTOINCREMENT,
+--  author_id INTEGER NOT NULL,
+--  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  name TEXT NOT NULL,
+--  start_time TEXT NOT NULL,
+--  days_of_week INTEGER NOT NULL,
+--);
+--
+--CREATE TABLE assign_zone_sched (
+--  id INTEGER PRIMARY KEY AUTOINCREMENT,
+--  author_id INTEGER NOT NULL,
+--  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--  zone INTEGER NOT NULL,
+--  sched INTEGER NOT NULL,
+--);
+

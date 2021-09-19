@@ -1,11 +1,13 @@
 AWSiOT
-/certs/
+certs/
 
 *.db
 /test_db
 /my_data
 
-/env/
+*.log
+env/*
+env
 *.pyc
 *.iml
 *.swp
