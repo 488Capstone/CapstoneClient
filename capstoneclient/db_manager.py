@@ -1,20 +1,31 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from .models import Base, SystemZoneConfig, SensorEntry, HistoryItem
+import os
 
 
 class DBManager:
 
     def __init__(self):
-        self.engine = create_engine("sqlite+pysqlite:///my_data", echo=False, future=True)
-        self.my_session = Session(self.engine)
-        # self.Session = sessionmaker(self.engine)
+        clientDir = os.getenv('SIOclientDir')
+        if clientDir is not None:
+            dbFileName = "sqlite+pysqlite:///{}/my_data".format(clientDir)
+            #print("Creating database at path: " + dbFileName)
+            self.engine = create_engine(dbFileName, echo=False, future=True)
+            self.my_session = Session(self.engine)
+            # self.Session = sessionmaker(self.engine)
+        else:
+            print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
     def start_databases(self):
         """ Initializes database from models, creates tables if not present."""
         Base.metadata.create_all(self.engine)
         if not self.get(SystemZoneConfig, "system"):
             self.setup_system()
+
+    def close(self):
+        self.my_session.close()
+        self.engine.dispose()
 
     def add(self, obj):
         """ Adds an object to the correct table - defined by model."""

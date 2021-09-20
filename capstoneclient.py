@@ -37,6 +37,7 @@ def op_menu():
     print("3. Application Rate Calibration")
     print("4. Settings [coming soon]")
     print("5. Water budgeting [coming soon]")
+    print("6. Reset system cronjobs")
     print("0. Exit")
     choice = input("Choose wisely. ")
     if choice == '0': 
@@ -45,12 +46,12 @@ def op_menu():
     if choice == '1': my_system()
     elif choice == '2': my_schedule()
     elif choice == '3': application_rate_cal()
+    elif choice == '6': task_scheduler()
     elif choice == '4' or '5':
         print("What is exactly do you think, \"coming soon\" means...?")
-        op_menu()
     else:
         print('Try again, turd')
-        op_menu()
+    op_menu()
 
 
 # my_system() displays basic system/zone data when requested from op_menu()
@@ -63,7 +64,6 @@ def my_system():
     print(f"Zone 1 soil is primarily {zone1.soil_type}. "
           f"Application rate is {zone1.application_rate} inches per hour.")
     input("Press any key to continue.")
-    op_menu()
 
 
 # my_schedule() displays basic scheduling data when requested from op_menu()
@@ -101,7 +101,6 @@ def my_schedule():
     for x in range(len(days)):
         print("On {}, zone 1 will run for {} minutes starting at {}:{}." \
               .format(days[x][0], days[x][3], days[x][2], days[x][1]))
-    op_menu()
 
 
 def startup():
@@ -187,32 +186,36 @@ def task_scheduler():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     clientDir = os.getenv('SIOclientDir')
     if clientDir is not None:
+        #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
+        #   tells subsequent scripts/programs what the location of the client side code is
+        prescriptCmd = "export SIOclientDir={0}; cd $SIOclientDir; ".format(clientDir)
         commentText = "SIO-LogFileReset"
         schedule.remove_all(comment=commentText)
-        log_update = schedule.new(command="cd {0} ; mv {1} {1}_last ".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+        log_update = schedule.new(command="{0} mv {1} {1}_last ".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
         commentText = "SIO-Daily"
         schedule.remove_all(comment=commentText)
-        daily_update = schedule.new(command="cd {0} ; ./dailyactions.py dailyupdate >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+        daily_update = schedule.new(command=" {0} ./dailyactions.py dailyupdate >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
         if not DWDBG:
             #normal operation
             #every day at 3am
             daily_update.setall('0 3 * * *')
-            log_update.setall('0 3 * * *')
+            #every 7 days at 3am?
+            log_update.setall('0 3 */7 * *')
         else:
             #every 10min
             daily_update.setall('*/10 * * * *')
-            log_update.setall('*/10 * * * *')
+            log_update.setall('*/20 * * * *')
 
         if on_raspi == True:
             #normal operation
             commentText = "SIO-Sensors"
             schedule.remove_all(comment=commentText)
-            sensor_query = schedule.new(command="cd {0} ; ./dailyactions.py readsensors >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+            sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
             sensor_query.setall('*/5 0 0 0 0')
         else:
             commentText = "SIO-DEV"
             schedule.remove_all(comment=commentText)
-            dev_mode = schedule.new(command="cd {0} ; ./dailyactions.py DEV >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+            dev_mode = schedule.new(command="{0} ./dailyactions.py DEV >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
             # every 1 minute
             dev_mode.setall('*/1 * * * *')
 
@@ -236,7 +239,6 @@ def application_rate_cal():
     zone_1.application_rate = new_application_rate
     db.add(zone1)  # add/update object
 
-    op_menu()
 
 
 def raspi_testing():

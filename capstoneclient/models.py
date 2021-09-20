@@ -4,7 +4,25 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
+# USERS table holds the registered users for this device. Currently should only be 1
+class Users(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String)
+    password = Column(String)
 
+    def __repr__(self):
+        return f"<Users: id={self.id}, " \
+               f"username={self.username}, " \
+               f"password = {self.password}>"
+
+# The original users table from the webgui looked lik:
+#-- create table for our login uname & pw
+#CREATE TABLE user (
+#  id INTEGER PRIMARY KEY AUTOINCREMENT,
+#  username TEXT UNIQUE NOT NULL,
+#  password TEXT NOT NULL
+#);
 
 # SENSORS table holds readings from device sensors.
 class SensorEntry(Base):

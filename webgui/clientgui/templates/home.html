@@ -6,7 +6,27 @@
 
 {% block content %}
     <label >First Page post-login, placeholder</label>
-    <div class="crontab">{{ cronsched }}</div>
+  <h2>SYSTEM</h2>
+  <!--<div >ZipCode: {{ zipcode }}</div>-->
+  <table>
+	  <tr>
+	  <th style="text-align: right;">Name</th>
+	  <th style="text-align: left;">Value</th>
+	  </tr>
+	{% for key in systemInfo %}
+	  <tr>
+		<div class="sysInfo">
+			<td style="text-align: right;">{{key}}</td> 
+			<td style="text-align: left; padding-left: 10px">{{systemInfo[key]}}</td> 
+		</div>
+	  </tr>
+	{% endfor %}
+  </table>
+  <h2>CronTab</h2>
+	{% for message in cronsched %}
+	<div class="cron">{{ message }}<br><br></div>
+	{% endfor %}
+	<!--<div class="crontab">CronTab value: {{ cronsched }}</div>-->
 {% endblock %}
 
 

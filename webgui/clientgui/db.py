@@ -24,8 +24,9 @@ def get_db():
 
 def close_db(e=None):
     db = g.pop('db', None)
-
-    if db is not None:
+    #TODOdone DW 2021-09-20-07:27  there's no longer a close() func on the new db... do I need this?
+    #DW 2021-09-20-09:27 I've added in a close func
+    if db is not None: 
         db.close()
 
 

@@ -6,6 +6,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from clientgui.db import get_db
+from sqlalchemy import text, exc
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -33,21 +34,22 @@ def register():
                 # add the uname and pw to our db
                 # the pw is hashed with gen_pw_hash() func below
                 #since we're in development, we don't want users to be able to register new acc's after the first
-                solo_user = db.execute(
-                    'SELECT * FROM user'
-                ).fetchone()
-                if solo_user is None:
-                    db.execute(
-                        "INSERT INTO user (username, password) VALUES (?, ?)",
-                        (username, generate_password_hash(password)),
-                    )
-                    # save the changes to db
-                    db.commit()
-                else:
-                    error = f"Proj in DEV mode, only 1 registered user allowed. The 1 user is already registered. Contact DW for login Creds"
-                    flash(error)
+                #users = db.get(Users, "system")
+                with db.engine.connect() as conn:
+                    solo_user = conn.execute(text('SELECT * FROM Users')).fetchone()
+                    if solo_user is None:
+                        conn.execute(text("INSERT INTO Users (username, password) VALUES (:name, :pw)"),
+                                {"name":username, "pw":generate_password_hash(password)}
+                        )
+                        # save the changes to db
+                        conn.commit()
+                    else:
+                        error = f"Proj in DEV mode, only 1 registered user allowed. The 1 user is already registered. Contact DW for login Creds"
+                        flash(error)
 
-            except db.IntegrityError:
+            #DW 2021-09-20-07:03 this worked with the old db methods. 
+            #TODO what's the exception thrown when user already registered now?
+            except exc.IntegrityError:
                 error = f"User {username} is already registered."
             else:
                 # redirect back to the login page?
@@ -70,23 +72,24 @@ def login():
         error = None
         # fetchone() returns one row from the query. If the query returned no results, it returns None. Later, fetchall() will be used, which returns a list of all results.
 
-        user = db.execute(
-            'SELECT * FROM user WHERE username = ?', (username,)
-        ).fetchone()
+        with db.engine.connect() as conn:
+            user = conn.execute(text(
+                'SELECT * FROM Users WHERE username = :name'), {"name":username}
+            ).fetchone()
 
-        if user is None:
-            error = 'Incorrect username.'
-        elif not check_password_hash(user['password'], password):
-            error = 'Incorrect password.'
+            if user is None:
+                error = 'Incorrect username.'
+            elif not check_password_hash(user['password'], password):
+                error = 'Incorrect password.'
 
-# session is a dict that stores data across requests. When validation succeeds, the user’s id is stored in a new session. The data is stored in a cookie that is sent to the browser, and the browser then sends it back with subsequent requests. Flask securely signs the data so that it can’t be tampered with.
+    # session is a dict that stores data across requests. When validation succeeds, the user’s id is stored in a new session. The data is stored in a cookie that is sent to the browser, and the browser then sends it back with subsequent requests. Flask securely signs the data so that it can’t be tampered with.
 
-        if error is None:
-            session.clear()
-            session['user_id'] = user['id']
-            return redirect(url_for('main.home'))
+            if error is None:
+                session.clear()
+                session['user_id'] = user['id']
+                return redirect(url_for('main.home'))
 
-        flash(error)
+            flash(error)
 
     return render_template('auth/login.html')
 
@@ -98,10 +101,9 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        g.user = get_db().execute(
-            'SELECT * FROM user WHERE id = ?', (user_id,)
-        ).fetchone()
-
+        with get_db().engine.connect() as conn:
+            g.user = conn.execute(text('SELECT * FROM Users WHERE id = :u'), 
+                    {"u":user_id}).fetchone()
 
 @bp.route('/logout')
 def logout():
