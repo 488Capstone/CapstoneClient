@@ -11,8 +11,8 @@ from crontab import CronTab
 from cron_descriptor import get_description
 import datetime
 from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME
-from db_manager import DBManager
-from models import SystemZoneConfig
+from capstoneclient.db_manager import DBManager
+from capstoneclient.models import SystemZoneConfig
 
 DWDBG = False
 
@@ -192,7 +192,7 @@ def task_scheduler():
         log_update = schedule.new(command="cd {0} ; mv {1} {1}_last ".format(clientDir, LOG_FILE_NAME) , comment=commentText)
         commentText = "SIO-Daily"
         schedule.remove_all(comment=commentText)
-        daily_update = schedule.new(command="cd {0} ; ./capstoneclient/dailyactions.py dailyupdate >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+        daily_update = schedule.new(command="cd {0} ; ./dailyactions.py dailyupdate >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
         if not DWDBG:
             #normal operation
             #every day at 3am
@@ -207,12 +207,12 @@ def task_scheduler():
             #normal operation
             commentText = "SIO-Sensors"
             schedule.remove_all(comment=commentText)
-            sensor_query = schedule.new(command="cd {0} ; ./capstoneclient/dailyactions.py readsensors >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+            sensor_query = schedule.new(command="cd {0} ; ./dailyactions.py readsensors >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
             sensor_query.setall('*/5 0 0 0 0')
         else:
             commentText = "SIO-DEV"
             schedule.remove_all(comment=commentText)
-            dev_mode = schedule.new(command="cd {0} ; ./capstoneclient/dailyactions.py DEV >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
+            dev_mode = schedule.new(command="cd {0} ; ./dailyactions.py DEV >> {1} 2>&1".format(clientDir, LOG_FILE_NAME) , comment=commentText)
             # every 1 minute
             dev_mode.setall('*/1 * * * *')
 

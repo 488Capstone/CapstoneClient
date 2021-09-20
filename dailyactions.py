@@ -11,9 +11,8 @@ import requests
 import json
 from datetime import date, datetime
 from crontab import CronTab
-
-from db_manager import DBManager
-from models import SensorEntry, SystemZoneConfig, HistoryItem
+from capstoneclient.models import SensorEntry, SystemZoneConfig, HistoryItem
+from capstoneclient.db_manager import DBManager
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
 LOG_FILE_NAME = './client_dev.log'
@@ -446,9 +445,9 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
     setRealSched = 0
     if on_raspi:
-        command_string = "cd {}; ./capstoneclient/zone_control.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+        command_string = "cd {}; ./zone_control.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
     else:
-        command_string = "cd {}; ./capstoneclient/zone_control_devmode.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+        command_string = "cd {}; ./zone_control_devmode.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
     
     if setRealSched:
         for x in range(len(days)):
@@ -474,6 +473,7 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
 #DW 2021-09-18-16:28 need to add this in so 'import' doesnt run this code
 #   We only want this code running when the script is called standalone.
 if __name__ == "__main__":
+
     db = DBManager()
     db.start_databases()
 
