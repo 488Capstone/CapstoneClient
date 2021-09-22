@@ -6,12 +6,13 @@
 
 #You should run this script from the */CapstoneClient/ directory
 
-printf "***set all the files to be executable that need to be run\n"
-chmod 755 -v ./runCLI.sh
-chmod 755 -v ./runWebGuiServer.sh
-chmod 755 -v ./capstoneclient/dailyactions.py
-chmod 755 -v ./capstoneclient/zone_control_devmode.py
-chmod 755 -v ./capstoneclient/zone_control.py
+#DW 2021-09-21-20:22 It turns out git preserves the permission settings of files so no need to do this.
+#printf "***set all the files to be executable that need to be run\n"
+#chmod 755 -v ./runCLI.sh
+#chmod 755 -v ./runWebGuiServer.sh
+#chmod 755 -v ./dailyactions.py
+#chmod 755 -v ./zone_control_devmode.py
+#chmod 755 -v ./zone_control.py
 
 if [[ -e ./env ]]; then
 	printf "Removing ./env directory. These should not be stored in git origin but instead created for each user\n"
