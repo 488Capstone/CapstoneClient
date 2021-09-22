@@ -437,30 +437,36 @@ def water_algo(zone: SystemZoneConfig) -> float:
 #    schedules watering events using crontab    #
 #################################################
 def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
-    currentDir = os.getcwd()
-    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    commentText = ZONE_CONTROL_COMMENT_NAME  
-    schedule.remove_all(comment=commentText)
-    #DW this var allows us to test the real schedule setting if we're in dev mode, if it remains 0 then we're in an accerated developer test mode
-    #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
-    setRealSched = 0
-    if on_raspi:
-        command_string = "cd {}; ./zone_control.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
-    else:
-        command_string = "cd {}; ./zone_control_devmode.py {} {} >> {} 2>&1" .format(currentDir, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
-    
-    if setRealSched:
-        for x in range(len(days)):
+    #currentDir = os.getcwd()
+    clientDir = os.getenv('SIOclientDir')
+    if clientDir is not None:
+        schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+        commentText = ZONE_CONTROL_COMMENT_NAME  
+        schedule.remove_all(comment=commentText)
+        #DW this var allows us to test the real schedule setting if we're in dev mode, if it remains 0 then we're in an accerated developer test mode
+        #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
+        setRealSched = 0
+        #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
+        prescriptCmd = "export SIOclientDir={0}; cd $SIOclientDir; ./env/bin/python3 ".format(clientDir)
+        if on_raspi:
+            command_string = "{} ./zone_control.py {} {} >> {} 2>&1" .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+        else:
+            command_string = "{} ./zone_control_devmode.py {} {} >> {} 2>&1" .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+        
+        if setRealSched:
+            for x in range(len(days)):
+                task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
+                task.dow.on(days[x])  # day of week as per object passed to the method
+                task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
+                task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+                schedule.write()  # finalizes the task in the crontab
+                print("task {} created" .format(x))
+        else:
             task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
-            task.dow.on(days[x])  # day of week as per object passed to the method
-            task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
-            task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+            task.setall('*/5 * * * *') # run every 5min
             schedule.write()  # finalizes the task in the crontab
-            print("task {} created" .format(x))
     else:
-        task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
-        task.setall('*/5 * * * *') # run every 5min
-        schedule.write()  # finalizes the task in the crontab
+        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
 
 

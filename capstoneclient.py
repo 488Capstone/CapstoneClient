@@ -192,6 +192,8 @@ def task_scheduler():
         commentText = "SIO-LogFileReset"
         schedule.remove_all(comment=commentText)
         log_update = schedule.new(command="{0} mv {1} {1}_last ".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+        #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
+        prescriptCmd += "./env/bin/python3 "
         commentText = "SIO-Daily"
         schedule.remove_all(comment=commentText)
         daily_update = schedule.new(command=" {0} ./dailyactions.py dailyupdate >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
@@ -199,12 +201,12 @@ def task_scheduler():
             #normal operation
             #every day at 3am
             daily_update.setall('0 3 * * *')
-            #every 7 days at 3am?
-            log_update.setall('0 3 */7 * *')
+            #every 14 days at 3am?
+            log_update.setall('0 3 */14 * *')
         else:
             #every 10min
             daily_update.setall('*/10 * * * *')
-            log_update.setall('*/20 * * * *')
+            log_update.setall('*/50 * * * *')
 
         if on_raspi == True:
             #normal operation
