@@ -6,7 +6,8 @@ export SIOclientDir=`pwd` #you should run this script from the directory where i
 file=$1
 shift
 rest_of_args=$@
-echo "Run Py script: ${file} $rest_of_args" >> ./client_dev.log 2>&1
 
+echo -n `date +"%Y-%m-%d %H:%M:%S.xxxxxx---"` >> ./client_dev.log 2>&1
+echo "Run Py script: ${file} $rest_of_args" >> ./client_dev.log 2>&1
 . env/bin/activate
-python3 $file $rest_of_args >> ./client_dev.log 2>&1 
+./env/bin/python3 $file $rest_of_args >> ./client_dev.log 2>&1 

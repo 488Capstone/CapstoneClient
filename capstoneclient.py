@@ -10,7 +10,7 @@ import requests
 from crontab import CronTab
 from cron_descriptor import get_description
 import datetime
-from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME
+from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import SystemZoneConfig
 
@@ -18,13 +18,24 @@ DWDBG = False
 
 # todo: maybe environment variable
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
-on_raspi = True
-try:
-    from raspispecific import *
-except:
-    input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
-    on_raspi = False
+
+on_raspi = isOnRaspi()
+if on_raspi :
+# this try/except lets code function outside of raspberry pi for development.
+    try:
+        from raspispecific import *
+    except Exception as e:
+        on_raspi = False
+        DWDBG = True
+        print("Importing raspi Python libs failed")
+        input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
+        print(e)
+        import traceback
+        errMsg = traceback.format_exc()
+        print(errMsg)
+else:
     DWDBG = True
+    input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
 
 
 # op_menu() is the landing spot for operations.

@@ -32,6 +32,8 @@ if [[ -e "/sys/firmware/devicetree/base/model" ]]; then
 	printf "DW: I suspect you're on the pi! Will run raspiRequirements!"
 	printf "DW: If this is wrong, let me know!"
 	python3 -m pip install -r raspiRequirements.txt
+	#DW 2021-09-23-16:16 for some reason smbus is a pain in my a$$
+	python3 -m pip install smbus --upgrade
 else
 	printf "DW: I suspect you're NOT on the pi!"
 	printf "DW: If this is wrong, let me know!"

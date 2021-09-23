@@ -16,21 +16,27 @@ from capstoneclient.db_manager import DBManager
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
 LOG_FILE_NAME = './client_dev.log'
 
-on_raspi = True
+def isOnRaspi ():
+    return os.path.exists("/sys/firmware/devicetree/base/model")
+
+on_raspi = isOnRaspi()
+if on_raspi :
 # this try/except lets code function outside of raspberry pi for development.
-try:
-    import smbus
-    import busio
-    import board 
-    from board import SCL, SDA
-    from adafruit_seesaw.seesaw import Seesaw
-    print("Appears to be running on Raspi")
-except Exception as e:
-    print("Importing raspi Python libs failed")
-    print(e)
-    errMsg = traceback.format_exc()
-    print(errMsg)
-    on_raspi = False
+    try:
+        import smbus
+        import busio
+        import board 
+        from board import SCL, SDA
+        from adafruit_seesaw.seesaw import Seesaw
+    except Exception as e:
+        on_raspi = False
+        DWDBG = True
+        print("Importing raspi Python libs failed")
+        print(e)
+        import traceback
+        errMsg = traceback.format_exc()
+        print(errMsg)
+else:
     DWDBG = True
  
 
@@ -513,6 +519,7 @@ if __name__ == "__main__":
         except Exception as e:
             devName = "Soil Moist/Temp Sensor"
             print("{0} Read Failed.\t{1}".format(devName,repr(e)))
+            import traceback
             errMsg = traceback.format_exc()
             print(errMsg)
         try:
@@ -520,6 +527,7 @@ if __name__ == "__main__":
         except:
             devName = "Baro Sensor"
             print("{0} Read Failed.\t{1}".format(devName,repr(e)))
+            import traceback
             errMsg = traceback.format_exc()
             print(errMsg)
 
@@ -555,6 +563,5 @@ if __name__ == "__main__":
         print("{}---DEV: test ".format(str(datetime.now())))
     elif choice == "DEV_SOIL":
         print("{}---DEV: SOIL ".format(str(datetime.now())))
-        soil = read_soil_sensor()   # value between [200, 2000]
         soil_moist, soil_temp = read_soil_sensor()   # value between [200, 2000]
 
