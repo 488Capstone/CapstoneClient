@@ -22,10 +22,11 @@ on_raspi = True
 try:
     import smbus
     import busio
+    import board 
     from board import SCL, SDA
-    from board 
     from Adafruit_Seesaw.seesaw import Seesaw
 except:
+    print("Importing raspi Python libs failed")
     on_raspi = False
     DWDBG = True
  
