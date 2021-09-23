@@ -23,6 +23,7 @@ try:
     import smbus
     import busio
     from board import SCL, SDA
+    from board 
     from Adafruit_Seesaw.seesaw import Seesaw
 except:
     on_raspi = False
@@ -174,7 +175,14 @@ def baro():
 #   soil moisture sensor functionality  #
 #########################################
 def soil():
-    soilmoisture = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
+    i2c_bus = board.I2C()
+    i2c_soil = Seesaw(i2c_bus, addr=0x36)
+    soilmoisture = i2c_soil.moisture_read()
+    soiltemp = i2c_soil.get_temp()
+
+    print("Soil Moisture: {0}\tSoil Temp: {1}".format(soilmoisture, soiltemp))
+    #DW 2021-09-23-12:26 does this code work?
+    #soilmoisture = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
     return soilmoisture
 
 
@@ -525,5 +533,7 @@ if __name__ == "__main__":
 
     elif choice == "DEV":
         print("{}---DEV: test ".format(str(datetime.now())))
-      
+    elif choice == "DEV_SOIL":
+        print("{}---DEV: SOIL ".format(str(datetime.now())))
+        soil = soil()   # value between [200, 2000]
 
