@@ -28,10 +28,19 @@ python3 -m venv env
 
 printf "DW: The Raspberry Pi has some modules which throw errors on the Desktop\n"
 printf "DW: so we will load the raspi specific modules only if we're on the Raspi\n"
-read -p "**Is this running on the Raspberry Pi? (Y/N): " confirm  
-if [[ "$confirm" == [yY] || "$confirm" == [yY][eE][sS] ]]; then
+if [[ -e "/sys/firmware/devicetree/base/model" ]]; then
+	printf "DW: I suspect you're on the pi! Will run raspiRequirements!"
+	printf "DW: If this is wrong, let me know!"
 	python3 -m pip install -r raspiRequirements.txt
+else
+	printf "DW: I suspect you're NOT on the pi!"
+	printf "DW: If this is wrong, let me know!"
 fi
+
+#read -p "**Is this running on the Raspberry Pi? (Y/N): " confirm  
+#if [[ "$confirm" == [yY] || "$confirm" == [yY][eE][sS] ]]; then
+#	python3 -m pip install -r raspiRequirements.txt
+#fi
 
 python3 -m pip install -r desktopRequirements.txt
 
