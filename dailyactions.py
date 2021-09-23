@@ -23,7 +23,7 @@ try:
     import busio
     import board 
     from board import SCL, SDA
-    from Adafruit_Seesaw.seesaw import Seesaw
+    from adafruit_seesaw.seesaw import Seesaw
     print("Appears to be running on Raspi")
 except:
     print("Importing raspi Python libs failed")
@@ -176,7 +176,8 @@ def baro():
 #   soil moisture sensor functionality  #
 #########################################
 def soil():
-    i2c_bus = busio.I2C(SCL, SDA)
+    i2c_bus = board.I2C()
+    #i2c_bus = busio.I2C(SCL, SDA)
     i2c_soil = Seesaw(i2c_bus, addr=0x36)
     soilmoisture = i2c_soil.moisture_read()
     soiltemp = i2c_soil.get_temp()
