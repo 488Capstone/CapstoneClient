@@ -25,8 +25,11 @@ try:
     from board import SCL, SDA
     from adafruit_seesaw.seesaw import Seesaw
     print("Appears to be running on Raspi")
-except:
+except Exception as e:
     print("Importing raspi Python libs failed")
+    print(e)
+    errMsg = traceback.format_exc()
+    print(errMsg)
     on_raspi = False
     DWDBG = True
  
