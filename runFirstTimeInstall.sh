@@ -29,14 +29,14 @@ python3 -m venv env
 printf "DW: The Raspberry Pi has some modules which throw errors on the Desktop\n"
 printf "DW: so we will load the raspi specific modules only if we're on the Raspi\n"
 if [[ -e "/sys/firmware/devicetree/base/model" ]]; then
-	printf "DW: I suspect you're on the pi! Will run raspiRequirements!"
-	printf "DW: If this is wrong, let me know!"
+	printf "DW: I suspect you're on the pi! Will run raspiRequirements!\n"
+	printf "DW: If this is wrong, let me know!\n"
 	python3 -m pip install -r raspiRequirements.txt
 	#DW 2021-09-23-16:16 for some reason smbus is a pain in my a$$
 	python3 -m pip install smbus --upgrade
 else
-	printf "DW: I suspect you're NOT on the pi!"
-	printf "DW: If this is wrong, let me know!"
+	printf "DW: I suspect you're NOT on the pi!\n"
+	printf "DW: If this is wrong, let me know!\n"
 fi
 
 #read -p "**Is this running on the Raspberry Pi? (Y/N): " confirm  
