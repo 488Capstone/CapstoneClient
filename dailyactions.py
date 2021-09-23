@@ -502,8 +502,24 @@ if __name__ == "__main__":
     print("{}---dailyactions.py::{}".format(str(datetime.now()), choice))
 
     if choice == "readsensors":
-        soil_moist, soil_temp = soil()   # value between [200, 2000]
-        baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
+        soil_moist = 0
+        soil_temp = 0
+        baro = [0, 0, 0]
+        try:
+            soil_moist, soil_temp = soil()   # value between [200, 2000]
+        except Exception as e:
+            devName = "Soil Moist/Temp Sensor"
+            print("{0} Read Failed.\t{1}".format(devName,repr(e)))
+            errMsg = traceback.format_exc()
+            print(errMsg)
+        try:
+            baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
+        except:
+            devName = "Baro Sensor"
+            print("{0} Read Failed.\t{1}".format(devName,repr(e)))
+            errMsg = traceback.format_exc()
+            print(errMsg)
+
         sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
         db.add(sample)
 
