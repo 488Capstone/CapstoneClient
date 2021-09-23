@@ -175,7 +175,7 @@ def baro():
 #########################################
 #   soil moisture sensor functionality  #
 #########################################
-def soil():
+def read_soil_sensor():
     i2c_bus = board.I2C()
     #i2c_bus = busio.I2C(SCL, SDA)
     i2c_soil = Seesaw(i2c_bus, addr=0x36)
@@ -183,9 +183,7 @@ def soil():
     soiltemp = i2c_soil.get_temp()
 
     print("Soil Moisture: {0}\tSoil Temp: {1}".format(soilmoisture, soiltemp))
-    #DW 2021-09-23-12:26 does this code work?
-    #soilmoisture = Seesaw(busio.I2C(SCL, SDA), addr=0x36).moisture_read()
-    return soilmoisture
+    return soilmoisture, soiltemp
 
 
 # TODO: Read ADC.
@@ -504,9 +502,9 @@ if __name__ == "__main__":
     print("{}---dailyactions.py::{}".format(str(datetime.now()), choice))
 
     if choice == "readsensors":
-        soil = soil()   # value between [200, 2000]
+        soil_moist, soil_temp = soil()   # value between [200, 2000]
         baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
-        sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil)
+        sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
         db.add(sample)
 
     elif choice == "dailyupdate":
@@ -538,5 +536,6 @@ if __name__ == "__main__":
         print("{}---DEV: test ".format(str(datetime.now())))
     elif choice == "DEV_SOIL":
         print("{}---DEV: SOIL ".format(str(datetime.now())))
-        soil = soil()   # value between [200, 2000]
+        soil = read_soil_sensor()   # value between [200, 2000]
+        soil_moist, soil_temp = read_soil_sensor()   # value between [200, 2000]
 
