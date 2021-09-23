@@ -1,15 +1,16 @@
-Adafruit-Blinka==6.3.2
-adafruit-circuitpython-bme280==2.5.4
-adafruit-circuitpython-busdevice==5.0.6
-Adafruit-PlatformDetect==3.3.0
-Adafruit-PureIO==1.1.8
+#DW 2021-09-23-14:09 all for raspi?
+#Adafruit-Blinka==6.3.2
+#adafruit-circuitpython-bme280==2.5.4
+#adafruit-circuitpython-busdevice==5.0.6
+#Adafruit-PlatformDetect==3.3.0
+#Adafruit-PureIO==1.1.8
 #pkg-resources==0.0.0
-pyftdi==0.52.9
-pyserial==3.5
-pyusb==1.1.1
-rpi-ws281x==4.2.5
+#pyftdi==0.52.9
+#pyserial==3.5
+#pyusb==1.1.1
+#rpi-ws281x==4.2.5
 #RPi.GPIO==0.7.0
-sysv-ipc==1.1.0
+#sysv-ipc==1.1.0
 
 flask==2.0.1
 python-crontab~=2.5.1
