@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 ##############################################################
 #  this script will be run as a crontab scheduled event,     #
 #  or during startup by importing to capstoneclient.py       #
@@ -25,6 +24,7 @@ try:
     import board 
     from board import SCL, SDA
     from Adafruit_Seesaw.seesaw import Seesaw
+    print("Appears to be running on Raspi")
 except:
     print("Importing raspi Python libs failed")
     on_raspi = False
@@ -456,11 +456,11 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
         setRealSched = 0
         #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
-        prescriptCmd = "export SIOclientDir={0}; cd $SIOclientDir; ./env/bin/python3 ".format(clientDir)
+        prescriptCmd = "cd $SIOclientDir; ./runPy.sh ".format(clientDir)
         if on_raspi:
-            command_string = "{} ./zone_control.py {} {} >> {} 2>&1" .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+            command_string = "{} ./zone_control.py {} {} " .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
         else:
-            command_string = "{} ./zone_control_devmode.py {} {} >> {} 2>&1" .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
+            command_string = "{} ./zone_control_devmode.py {} {} " .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
         
         if setRealSched:
             for x in range(len(days)):
@@ -494,6 +494,7 @@ if __name__ == "__main__":
 
     #DW 2021-09-18-14:49 - Collin had this set as argv[0], but that would return the script name, wouldn't it? It was not working for me. Now this is working.
     #DW the reason he had it set to 0 might be because when importing the file in capstoneclient.py it would throw and error if set to 1!
+    #TODO DW 2021-09-23-13:27 need to check number of args first. Could create an error
     choice = sys.argv[1]
 
     #probe('choice')

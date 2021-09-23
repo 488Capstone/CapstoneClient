@@ -188,15 +188,15 @@ def task_scheduler():
     if clientDir is not None:
         #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
         #   tells subsequent scripts/programs what the location of the client side code is
-        prescriptCmd = "export SIOclientDir={0}; cd $SIOclientDir; ".format(clientDir)
+        prescriptCmd = "cd $SIOclientDir; ".format(clientDir)
         commentText = "SIO-LogFileReset"
         schedule.remove_all(comment=commentText)
-        log_update = schedule.new(command="{0} mv {1} {1}_last ".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+        log_update = schedule.new(command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
         #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
-        prescriptCmd += "./env/bin/python3 "
+        prescriptCmd += "./runPy.sh "
         commentText = "SIO-Daily"
         schedule.remove_all(comment=commentText)
-        daily_update = schedule.new(command=" {0} ./dailyactions.py dailyupdate >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+        daily_update = schedule.new(command=" {0} ./dailyactions.py dailyupdate ".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
         if not DWDBG:
             #normal operation
             #every day at 3am
@@ -212,12 +212,12 @@ def task_scheduler():
             #normal operation
             commentText = "SIO-Sensors"
             schedule.remove_all(comment=commentText)
-            sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+            sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
             sensor_query.setall('*/5 0 0 0 0')
         else:
             commentText = "SIO-DEV"
             schedule.remove_all(comment=commentText)
-            dev_mode = schedule.new(command="{0} ./dailyactions.py DEV >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+            dev_mode = schedule.new(command="{0} ./dailyactions.py DEV".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
             # every 1 minute
             dev_mode.setall('*/1 * * * *')
 
