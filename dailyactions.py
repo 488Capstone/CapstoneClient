@@ -455,7 +455,7 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
         setRealSched = 0
         #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
-        prescriptCmd = "cd $SIOclientDir; ./runPy.sh ".format(clientDir)
+        prescriptCmd = "cd {}; ./runPy.sh ".format(clientDir)
         if on_raspi:
             command_string = "{} ./zone_control.py {} {} " .format(prescriptCmd, str(zoneid), str(duration), LOG_FILE_NAME)  # adds args to zone_control.py
         else:

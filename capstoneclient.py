@@ -188,7 +188,7 @@ def task_scheduler():
     if clientDir is not None:
         #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
         #   tells subsequent scripts/programs what the location of the client side code is
-        prescriptCmd = "cd $SIOclientDir; ".format(clientDir)
+        prescriptCmd = "cd {}; ".format(clientDir)
         commentText = "SIO-LogFileReset"
         schedule.remove_all(comment=commentText)
         log_update = schedule.new(command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
