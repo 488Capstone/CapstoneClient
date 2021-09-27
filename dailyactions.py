@@ -422,8 +422,8 @@ def et_calculations(h_i: HistoryItem) -> HistoryItem:  # string passed determine
 
 
 # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
-def water_algo(zone: SystemZoneConfig) -> float:
-    """Calls water_scheduler with attributes from given zone [SystemZoneConfig]. Then outputs session time [float]."""
+def water_algo(zone: SystemZoneConfig) -> int:
+    """Calls water_scheduler with attributes from given zone [SystemZoneConfig]. Then outputs session time [int]."""
     waterdata = zone
     watering_days = []
     if waterdata.waterSun == 1:
@@ -445,9 +445,12 @@ def water_algo(zone: SystemZoneConfig) -> float:
     emitterefficiency = {"rotary": 0.7}
     effectiveapplicationrate = waterdata.application_rate * emitterefficiency["rotary"]
     req_watering_time = (waterdata.water_deficit / effectiveapplicationrate) * 60  # total number of minutes needed
-    session_time = req_watering_time / len(watering_days)  # number of minutes per watering session
+    session_time = int(req_watering_time / len(watering_days))  # number of minutes per watering session
+    if session_time < 0:
+        session_time = 0
 
-    water_scheduler( zoneid="zone1", days=watering_days, duration=session_time, pref_time_hrs=waterdata.pref_time_hrs, pref_time_min=waterdata.pref_time_min)
+    water_scheduler(zoneid="zone1", days=watering_days, duration=session_time, pref_time_hrs=waterdata.pref_time_hrs,
+                    pref_time_min=waterdata.pref_time_min)
     return session_time
 
 
