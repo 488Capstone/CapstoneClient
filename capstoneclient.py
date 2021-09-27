@@ -273,8 +273,17 @@ def raspi_testing():
     # todo figure prevent error without source
     # schedule = Schedule()
     # sense = Sensors()
-    baro_data = read_baro_sensor()
-    soil_data = read_soil_sensor()
+    baro_data = [0, 0, 0]
+    soil_data = [0, 0]
+    try:
+        soil_data = read_soil_sensor()
+    except Exception as e:
+        print(f" Read Failed, {repr(e)}")
+    try:
+        baro_data = read_baro_sensor()
+
+    except Exception as e:
+        print(f" Read Failed, {repr(e)}")
     sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
 
     print("Welcome aboard, matey.")

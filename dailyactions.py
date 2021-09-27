@@ -363,7 +363,6 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
             if len(matching_list) >= 1:
                 history_item.solar = matching_list[0][1]
 
-
         return wl_ps
 
     # generate list of day items with weather data, apply solar data to matching days
