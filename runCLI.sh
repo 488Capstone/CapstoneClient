@@ -7,3 +7,6 @@ echo "Running main capstone client script: $file"
 
 . env/bin/activate
 python3 $file
+
+# adding so terminal window not closed to see errors
+$SHELL

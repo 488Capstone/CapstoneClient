@@ -7,23 +7,25 @@
 import os
 import sys
 import requests
+
 from crontab import CronTab
-from cron_descriptor import get_description
+# from cron_descriptor import get_description
 import datetime
-from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi
+from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi, \
+    read_baro_sensor, read_soil_sensor
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import SystemZoneConfig
 
 DWDBG = False
 
-# todo: maybe environment variable
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
 
 on_raspi = isOnRaspi()
-if on_raspi :
-# this try/except lets code function outside of raspberry pi for development.
+if on_raspi:
+    # this try/except lets code function outside of raspberry pi for development.
     try:
-        from raspispecific import *
+        # todo: import error on RPi => adding from capstoneclient to import below
+        from capstoneclient.raspispecific import *
     except Exception as e:
         on_raspi = False
         DWDBG = True
@@ -54,10 +56,14 @@ def op_menu():
     if choice == '0': 
         print("Exiting program")
         exit()
-    if choice == '1': my_system()
-    elif choice == '2': my_schedule()
-    elif choice == '3': application_rate_cal()
-    elif choice == '6': task_scheduler()
+    if choice == '1':
+        my_system()
+    elif choice == '2':
+        my_schedule()
+    elif choice == '3':
+        application_rate_cal()
+    elif choice == '6':
+        task_scheduler()
     elif choice == '4' or '5':
         print("What is exactly do you think, \"coming soon\" means...?")
     else:
@@ -68,7 +74,6 @@ def op_menu():
 # my_system() displays basic system/zone data when requested from op_menu()
 # todo: these not returning config just set up
 def my_system():
-
 
     print("System Data:")
     print(f"Location: {my_sys.city}, {my_sys.state}, {my_sys.zipcode}")
@@ -81,28 +86,38 @@ def my_system():
 def my_schedule():
     # TECHNICAL DEBT! This code is not hardened against all possible inputs.
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    days = [] # init empty array
+    days = []  # init empty array
 
     # dump every ZoneControl task into days array:
     for tasks in schedule:
         if tasks.comment == ZONE_CONTROL_COMMENT_NAME:
-            days.append([str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])])                      #
-                                                                                                                       #
+            days.append([str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])])
+
     # parse days array into usable strings:
     day_string = ""
     for x in range(len(days)):
-        if days[x][0] == "MON": days[x][0] = "Monday"
-        elif days[x][0] == "TUE": days[x][0] = "Tuesday"
-        elif days[x][0] == "WED": days[x][0] = "Wednesday"
-        elif days[x][0] == "THU": days[x][0] = "Thursday"
-        elif days[x][0] == "FRI": days[x][0] = "Friday"
-        elif days[x][0] == "SAT": days[x][0] = "Saturday"
-        elif days[x][0] == "SUN": days[x][0] = "Sunday"
+        if days[x][0] == "MON":
+            days[x][0] = "Monday"
+        elif days[x][0] == "TUE":
+            days[x][0] = "Tuesday"
+        elif days[x][0] == "WED":
+            days[x][0] = "Wednesday"
+        elif days[x][0] == "THU":
+            days[x][0] = "Thursday"
+        elif days[x][0] == "FRI":
+            days[x][0] = "Friday"
+        elif days[x][0] == "SAT":
+            days[x][0] = "Saturday"
+        elif days[x][0] == "SUN":
+            days[x][0] = "Sunday"
 
-        if days[x][1] == "0": days[x][1] = "00"
+        if days[x][1] == "0":
+            days[x][1] = "00"
 
-        if int(days[x][2]) < 12: days[x][1] = days[x][1] + "AM"
-        else: days[x][1] = days[x][1] + "PM"
+        if int(days[x][2]) < 12:
+            days[x][1] = days[x][1] + "AM"
+        else:
+            days[x][1] = days[x][1] + "PM"
 
         if x+1 == len(days):
             day_string = day_string + "and " + days[x][0]
@@ -140,10 +155,10 @@ def startup():
     print("Lets talk about Zone 1, since this is a limited prototype and all.")
     soil_type = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or ""'loamy']")
     while soil_type != ("sandy" or "loamy"):
-        soil_type = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or loamy?")
+        soil_type = input("Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or "
+                          "loamy?")
 
     zone1.soil_type = soil_type
-
 
     # TECHNICAL DEBT! improve user selection of watering days and times.
     if soil_type == 'sandy':
@@ -183,7 +198,6 @@ def startup():
     print("Beep...Bop...Boop...")
     print("Judging by the past week, you have a total water deficit of {} inches." .format(str(waterdeficit)))
 
-
     print("Creating recurring tasks...")
     task_scheduler()
 
@@ -202,7 +216,8 @@ def task_scheduler():
         prescriptCmd = "cd {}; ".format(clientDir)
         commentText = "SIO-LogFileReset"
         schedule.remove_all(comment=commentText)
-        log_update = schedule.new(command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+        log_update = schedule.new(command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME),
+                                  comment=commentText)
         #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
         prescriptCmd += "./runPy.sh "
         commentText = "SIO-Daily"
@@ -219,16 +234,16 @@ def task_scheduler():
             daily_update.setall('*/10 * * * *')
             log_update.setall('*/50 * * * *')
 
-        if on_raspi == True:
+        if on_raspi:
             #normal operation
             commentText = "SIO-Sensors"
             schedule.remove_all(comment=commentText)
-            sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
-            sensor_query.setall('*/5 0 0 0 0')
+            sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors".format(prescriptCmd, LOG_FILE_NAME), comment=commentText)
+            sensor_query.setall('*/5 * * * *')
         else:
             commentText = "SIO-DEV"
             schedule.remove_all(comment=commentText)
-            dev_mode = schedule.new(command="{0} ./dailyactions.py DEV".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
+            dev_mode = schedule.new(command="{0} ./dailyactions.py DEV".format(prescriptCmd, LOG_FILE_NAME), comment=commentText)
             # every 1 minute
             dev_mode.setall('*/1 * * * *')
 
@@ -253,14 +268,13 @@ def application_rate_cal():
     db.add(zone1)  # add/update object
 
 
-
 def raspi_testing():
     #TODO DW I'm not sure what Collin meant with this below comment?
     # todo figure prevent error without source
-    schedule = ()  # Schedule()
-    sense = ()  # Sensors()
-    baro_data = sense.baro()
-    soil_data = sense.soil()
+    # schedule = Schedule()
+    # sense = Sensors()
+    baro_data = read_baro_sensor()
+    soil_data = read_soil_sensor()
     sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
 
     print("Welcome aboard, matey.")

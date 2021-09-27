@@ -62,4 +62,6 @@ pip install -e .
 #
 #printf "\n***Install Python sqlalchemy\n"
 #python3 -m pip install sqlalchemy==1.4.23
-#
+
+# adding so terminal window doesn't close on completion:
+$SHELL

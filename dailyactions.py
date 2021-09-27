@@ -61,10 +61,11 @@ else:
     def probe(expr): 
         return 0 
 
+
 #####################################
 #    BME280 sensor functionality    #
 #####################################
-def baro():
+def read_baro_sensor():
     # TODO: remove humidity artifacts from baro method
     bus = smbus.SMBus(1)  # BME280 address, 0x76(118)
     # Read data back from 0x88(136), 24 bytes
@@ -181,12 +182,12 @@ def baro():
     data = [cTemp, fTemp, pressure, humidity]
     return data
 
+
 #########################################
 #   soil moisture sensor functionality  #
 #########################################
 def read_soil_sensor():
     i2c_bus = board.I2C()
-    #i2c_bus = busio.I2C(SCL, SDA)
     i2c_soil = Seesaw(i2c_bus, addr=0x36)
     soilmoisture = i2c_soil.moisture_read()
     soiltemp = i2c_soil.get_temp()
@@ -486,7 +487,6 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
 
-
 ##############################################
 #                                            #
 #                 IT BEGINS.                 #
@@ -515,23 +515,23 @@ if __name__ == "__main__":
         soil_temp = 0
         baro = [0, 0, 0]
         try:
-            soil_moist, soil_temp = soil()   # value between [200, 2000]
+            soil_moist, soil_temp = read_soil_sensor()   # value between [200, 2000]
         except Exception as e:
             devName = "Soil Moist/Temp Sensor"
-            print("{0} Read Failed.\t{1}".format(devName,repr(e)))
+            print("{0} Read Failed.\t{1}".format(devName, repr(e)))
             import traceback
             errMsg = traceback.format_exc()
             print(errMsg)
         try:
-            baro = baro()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
-        except:
+            baro = read_baro_sensor()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
+        except Exception as e:
             devName = "Baro Sensor"
-            print("{0} Read Failed.\t{1}".format(devName,repr(e)))
+            print("{0} Read Failed.\t{1}".format(devName, repr(e)))
             import traceback
             errMsg = traceback.format_exc()
             print(errMsg)
 
-        sample = SensorEntry(datetime=datetime.now, temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
+        sample = SensorEntry(datetime=datetime.now(), temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
         db.add(sample)
 
     elif choice == "dailyupdate":

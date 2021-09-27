@@ -207,7 +207,7 @@ def get_description(expression, options=None):
         expression: The cron expression string
         options: Options to control the output description
     Returns:
-        The cron expression description
+        The cron expression description"""
 
 
 
