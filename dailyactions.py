@@ -52,12 +52,6 @@ else:
         return 0 
 
 
-
-
-
-
-
-
 #############################################################################
 #    Queries APIs weather/solar data and dumps it into db table "HISTORY"   #
 #############################################################################
@@ -311,7 +305,7 @@ def water_algo(zone: SystemZoneConfig) -> int:
 #    schedules watering events using crontab    #
 #################################################
 def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
-    #currentDir = os.getcwd()
+
     clientDir = os.getenv('SIOclientDir')
     if clientDir is not None:
         schedule = CronTab(user=True)  # opens the crontab (list of all tasks)

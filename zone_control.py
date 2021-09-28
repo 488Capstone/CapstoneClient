@@ -2,34 +2,103 @@
 # TODO: functionality: manual override by user command
 # (eg. if duration='user' then do something different)
 
+# todo: scheduler to reqs
 import RPi.GPIO as GPIO
-from datetime import datetime
-import time
+from datetime import datetime, timedelta
 import sys
+import schedule
 
-now_time = str(datetime.now())
-zone = sys.argv[1]
-duration = sys.argv[2]
+# zone 1: GPIO19 (J7 1-2), zone 2: GPIO26 (J7 3-4), zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
+zone_lookup = (19, 26, 18, 23, 24, 25)
 
-print(f"{now_time}---zone_control.py:: {zone} {duration}")
+
+def open_valve(zn: int):
+    channel = zone_lookup[zn-1]
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(channel, GPIO.OUT)
+    GPIO.output(channel, GPIO.HIGH)
+    now_time = datetime.now()
+    print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) ON")
+
+
+def open_all():
+    GPIO.setmode(GPIO.BCM)
+    for num in range(6):
+        channel = zone_lookup[num]
+        GPIO.setup(channel, GPIO.OUT)
+        GPIO.output(channel, GPIO.HIGH)
+        now_time = datetime.now()
+        print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) ON")
+
+
+def close_valve(zn: int):
+    channel = zone_lookup[zn - 1]
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(channel, GPIO.OUT)
+    GPIO.output(channel, GPIO.LOW)
+    now_time = datetime.now()
+    print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) OFF")
+    return schedule.CancelJob
+
+
+def close_all():
+    GPIO.setmode(GPIO.BCM)
+    for num in range(6):
+        channel = zone_lookup[num]
+        GPIO.setup(channel, GPIO.OUT)
+        GPIO.output(channel, GPIO.LOW)
+        now_time = datetime.now()
+        print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) OFF")
+
+
+def open_valve_for(zn: int, dur):
+    open_valve(zn)
+    schedule.every(dur).minutes.do(close_valve, zn=zn)
+
+
+
+def cleanup():
+    GPIO.cleanup()
+
+
+test_mode = True
+
+
+# todo take list of zones, durations via CLI
+# for direct call to this file:
 # CLI: > ./zone_control.py ['zone1'] [duration]
-#  zone = sys.argv[1]  # would need a dict lookup here if multiple zones were being implemented
-zone = 21  # GPIO29, arbitrary choice
-duration = sys.argv[2]
+# todo change CLI to zone_control.py ['zone1'][duration][on_off]
+if __name__ == "__main__":
+    zone = int(sys.argv[1][-1])  # last char is id => check 0 to 6, 0 operates all zones
+    duration = int(sys.argv[2])  # number of minutes => check 0 to 300
+    on_off = sys.argv[3]
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(zone, GPIO.OUT)
+    if zone in range(7) and duration in range(301):
 
-# script needs to take command line argument “duration” - sprinkle time in minutes
+        if zone == 0:
+            if on_off == 'on':
+                open_all()
+            if on_off == 'off':
+                close_all()
 
-duration = int(duration) * 60  # puts duration into seconds
-start_time = time.time()
-print("{}---zone_control.py:: Zone1(pin{}) ENABLED".format(str(datetime.now()), zone))
-GPIO.output(zone, GPIO.HIGH)
-elapsed_time = time.time() - start_time
-while duration > elapsed_time:
-    time.sleep(1)
-    elapsed_time = time.time() - start_time
-print("{}---zone_control.py:: Zone1(pin{}) DISABLED".format(str(datetime.now()), zone))
-GPIO.output(zone, GPIO.LOW)
-sys.exit()
+        elif on_off == 'on' and duration == 0:
+            open_valve(zone)
+
+        elif on_off == 'off':
+            close_valve(zone)
+
+        else:
+            open_valve_for(zone, duration)
+            while schedule.get_jobs():
+                schedule.run_pending()
+
+    else:
+        print(f"bad zone/duration values: zone={zone}, duration={duration}, on_off={on_off}")
+
+if test_mode:
+    open_valve_for(1, 0.1)
+    while schedule.get_jobs():
+        schedule.run_pending()
+    cleanup()  # cleanup turns everything to input
+
+# sys.exit()

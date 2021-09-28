@@ -11,10 +11,11 @@ import requests
 from crontab import CronTab
 # from cron_descriptor import get_description
 import datetime
-from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi, \
-    read_baro_sensor, read_soil_sensor
+from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import SystemZoneConfig
+
+from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
 DWDBG = False
 
