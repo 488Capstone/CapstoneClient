@@ -1,6 +1,4 @@
 #!/usr/bin/python3
-# TODO: functionality: manual override by user command
-# (eg. if duration='user' then do something different)
 
 # todo: scheduler to reqs
 import RPi.GPIO as GPIO
@@ -8,7 +6,7 @@ from datetime import datetime, timedelta
 import sys
 import schedule
 
-# zone 1: GPIO19 (J7 1-2), zone 2: GPIO26 (J7 3-4), zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
+# zone 1: GPIO19, zone 2: GPIO26, zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
 zone_lookup = (19, 26, 18, 23, 24, 25)
 
 
@@ -51,26 +49,22 @@ def close_all():
         print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) OFF")
 
 
-
-
 def open_valve_for(zn: int, dur):
     open_valve(zn)
     schedule.every(dur).minutes.do(close_valve, zn=zn)
-
 
 
 def cleanup():
     GPIO.cleanup()
 
 
-test_mode = True
+test_mode = False
 
 
 # todo take list of zones, durations via CLI
 # for direct call to this file:
 # CLI: > ./zone_control.py ['zone1'] [duration]
-# todo change CLI to zone_control.py ['zone1'][duration][on_off]
-if __name__ == "__main__":
+if __name__ == "__main__" and not test_mode:
     zone = int(sys.argv[1][-1])  # last char is id => check 0 to 6, 0 operates all zones
     duration = int(sys.argv[2])  # number of minutes => check 0 to 300
     on_off = sys.argv[3]
