@@ -17,6 +17,8 @@ from capstoneclient.models import SystemZoneConfig
 
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
+from zone_control import open_all, close_all
+
 DWDBG = False
 
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
@@ -49,9 +51,11 @@ def op_menu():
     print("1. My System")
     print("2. My Schedule")
     print("3. Application Rate Calibration")
-    print("4. Settings [coming soon]")
-    print("5. Water budgeting [coming soon]")
-    print("6. Reset system cronjobs")
+    print("4. Open all valves")
+    print("5. Close all valves")
+    print("6. Settings [coming soon]")
+    print("7. Water budgeting [coming soon]")
+    print("8. Reset system cronjobs")
     print("0. Exit")
     choice = input("Choose wisely. ")
     if choice == '0': 
@@ -63,9 +67,13 @@ def op_menu():
         my_schedule()
     elif choice == '3':
         application_rate_cal()
-    elif choice == '6':
+    elif choice == '4':
+        open_all()
+    elif choice == '5':
+        close_all()
+    elif choice == '8':
         task_scheduler()
-    elif choice == '4' or '5':
+    elif choice == '6' or '7':
         print("What is exactly do you think, \"coming soon\" means...?")
     else:
         print('Try again, turd')
