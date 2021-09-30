@@ -365,7 +365,7 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     else:
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
-def read_adc_wrap (select):
+def read_adc_wrap (select, verbose=True):
     val, volt = 0, 0
     choices {
             "valve1_current": [0x48, 0]
@@ -384,6 +384,9 @@ def read_adc_wrap (select):
         addr = choice[0]
         pin = choice[1]
         val, volt = read_adc(addr, pin)
+        if verbose:
+            timenow = str(datetime.now())
+            print(f"{timenow}---{select}: ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
     else:
         print(f"Select:'{select}' is not an option in Choices:[{choices.keys()}]")
     return val, volt
