@@ -7,7 +7,7 @@ try:
     from board import SCL, SDA
     from adafruit_seesaw.seesaw import Seesaw
     #for the ADC
-    import adafruit_ads1x15.ads1015 as ADS
+    import adafruit_ads1x15.ads1115 as ADS
     from adafruit_ads1x15.analog_in import AnalogIn
 except Exception as e:
     print("Importing raspi Python libs failed")
@@ -17,16 +17,16 @@ except Exception as e:
     print(errMsg)
 
 
-# TODO: Read ADC.
+# TODOdone: Read ADC.
 ################################
 #   ADC module functionality   #
 ################################
 def read_adc(addr, pin):  # currently working in adcsource.py
+    adc_value = 0
+    adc_voltage = 0
     try:
-        adc_value = 0
-        adc_voltage = 0
         i2c_bus = board.I2C()
-        adc = ADS.ADS1015(i2c_bus, address=addr)
+        adc = ADS.ADS1115(i2c_bus, address=addr)
         if pin == 0:
             channel = AnalogIn(adc, ADS.P0)
         elif pin == 1:
