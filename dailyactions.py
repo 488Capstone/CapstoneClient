@@ -417,12 +417,12 @@ def read_adc_for (select, verbose=True):
         rtrnval = {}
         for key in choices.keys():
             choice = choices[key]
-            rtrnval[key] = read_adc_for_internal(select, choice, verbose=verbose)
+            rtrnval[key] = read_adc_for_internal(key, choice, verbose=verbose)
     elif select in choices:
         choice = choices[select]
         rtrnval = read_adc_for_internal(select, choice, verbose=verbose)
     else:
-        print(f"Select:'{select}' is not an option in Choices:[{choices.keys()}]")
+        print(f"Select:'{select}' is not an option in Choices:[{list(choices.keys())}]")
     return rtrnval
 
 ##############################################
