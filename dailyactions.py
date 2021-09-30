@@ -13,7 +13,7 @@ from crontab import CronTab
 from capstoneclient.models import SensorEntry, SystemZoneConfig, HistoryItem
 from capstoneclient.db_manager import DBManager
 
-from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
+from capstoneclient.sensors import read_baro_sensor, read_soil_sensor, read_adc
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
 LOG_FILE_NAME = './client_dev.log'
@@ -443,4 +443,15 @@ if __name__ == "__main__":
     elif choice == "DEV_SOIL":
         print("{}---DEV: SOIL ".format(str(datetime.now())))
         soil_moist, soil_temp = read_soil_sensor()   # value between [200, 2000]
+    elif choice == "DEV_ADC":
+        print("{}---DEV: ADC ".format(str(datetime.now())))
+        adc_addresses = [0x48, 0x49, 0x4a, 0x4b]
+        adc_pins = list(range(0,4))
+        for addr in adc_addresses:
+            for pin in adc_pins:
+                timenow = str(datetime.now()))
+                print(f"{timenow}---READING: ADC({addr})-PIN({pin})")
+                val, volt = read_adc(addr, pin)
+                timenow = str(datetime.now()))
+                print(f"{timenow}---ADC({addr})-PIN({pin}):: value: {val}, voltage: {volt}")
 

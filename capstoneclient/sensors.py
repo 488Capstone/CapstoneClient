@@ -6,6 +6,9 @@ try:
     import board
     from board import SCL, SDA
     from adafruit_seesaw.seesaw import Seesaw
+    #for the ADC
+    import adafruit_ads1x15.ads1015 as ADS
+    from adafruit_ads1x15.analog_in import AnalogIn
 except Exception as e:
     print("Importing raspi Python libs failed")
     print(e)
@@ -18,8 +21,30 @@ except Exception as e:
 ################################
 #   ADC module functionality   #
 ################################
-def adc():  # currently working in adcsource.py
-    pass
+def read_adc(addr, pin):  # currently working in adcsource.py
+    try:
+        adc_value = 0
+        adc_voltage = 0
+        i2c_bus = board.I2C()
+        adc = ADS.ADS1015(i2c_bus, address=addr)
+        if pin == 0:
+            channel = AnalogIn(adc, ADS.P0)
+        elif pin == 1:
+            channel = AnalogIn(adc, ADS.P1)
+        elif pin == 2:
+            channel = AnalogIn(adc, ADS.P2)
+        elif pin == 3:
+            channel = AnalogIn(adc, ADS.P3)
+        else:
+            channel = AnalogIn(adc, ADS.P0)
+        adc_value = channel.value
+        adc_voltage = channel.voltage
+    except Exception as e:
+        print(e)
+
+    # print(f"Soil Moisture: {soilmoisture}, Soil Temp: {soiltemp}")
+    return adc_value, adc_voltage
+
 
 
 #########################################

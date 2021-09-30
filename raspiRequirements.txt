@@ -5,6 +5,8 @@ adafruit-circuitpython-bme280==2.5.4
 adafruit-circuitpython-busdevice==5.0.6
 Adafruit-PlatformDetect==3.3.0
 Adafruit-PureIO==1.1.8
+# ADC support lib
+adafruit-circuitpython-ads1x15==2.2.8 
 # removing this: pkg-resources==0.0.0 ... bug from virtualenv?
 pyftdi==0.52.9
 pyserial==3.5
