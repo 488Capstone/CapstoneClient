@@ -367,16 +367,16 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
 
 def read_adc_wrap (select, verbose=True):
     val, volt = 0, 0
-    choices {
-            "valve1_current": [0x48, 0]
-            "valve2_current": [0x48, 1]
-            "valve3_current": [0x48, 2]
-            "valve4_current": [0x48, 3]
-            "valve5_current": [0x49, 0]
-            "valve6_current": [0x49, 1]
-            "solar_current" : [0x49, 2]
-            "ps_current"    : [0x49, 3]
-            "5v_sense"    : [0x51, 0]
+    choices = {
+            "valve1_current": [0x48, 0],
+            "valve2_current": [0x48, 1],
+            "valve3_current": [0x48, 2],
+            "valve4_current": [0x48, 3],
+            "valve5_current": [0x49, 0],
+            "valve6_current": [0x49, 1],
+            "solar_current" : [0x49, 2],
+            "ps_current"    : [0x49, 3],
+            "5v_sense"      : [0x51, 0],
             "temp_sense"    : [0x50, 1]
             }
     if select in choices:
