@@ -395,6 +395,7 @@ def read_adc_for (select, verbose=True):
             #puts the voltage level back at the magnitude of what we were sensing
             #TODO need to add the gain terms for the currents
             #TODO need to add the gain terms for temp sense
+            #   Name        :  addr pin unit gain_conversion
     choices = {
             "valve1_current": [0x48, 0, 'A'],
             "valve2_current": [0x48, 1, 'A'],
@@ -422,7 +423,7 @@ def read_adc_for (select, verbose=True):
         choice = choices[select]
         rtrnval = read_adc_for_internal(select, choice, verbose=verbose)
     else:
-        print(f"Select:'{select}' is not an option in Choices:[{list(choices.keys())}]")
+        print(f"Select:'{select}' is not an option in Choices:{list(choices.keys())}")
     return rtrnval
 
 ##############################################
