@@ -371,7 +371,7 @@ def read_adc_for_internal (select, arglist, verbose=True):
     pin = arglist[1]
     unit = arglist[2]
     if len(arglist) > 3:
-        gain = arglist[4]
+        gain = arglist[3]
     else:
         gain = 1
     val, volt = read_adc(addr, pin)
