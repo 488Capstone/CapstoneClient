@@ -449,9 +449,9 @@ if __name__ == "__main__":
         adc_pins = list(range(0,4))
         for addr in adc_addresses:
             for pin in adc_pins:
-                timenow = str(datetime.now()))
+                timenow = str(datetime.now())
                 print(f"{timenow}---READING: ADC({addr})-PIN({pin})")
                 val, volt = read_adc(addr, pin)
-                timenow = str(datetime.now()))
+                timenow = str(datetime.now())
                 print(f"{timenow}---ADC({addr})-PIN({pin}):: value: {val}, voltage: {volt}")
 
