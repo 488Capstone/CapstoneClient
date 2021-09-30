@@ -505,13 +505,13 @@ if __name__ == "__main__":
         soil_moist, soil_temp = read_soil_sensor()   # value between [200, 2000]
     elif choice == "DEV_ADC":
         print("{}---DEV: ADC ".format(str(datetime.now())))
-        adc_addresses = [0x48, 0x49, 0x4a, 0x4b]
-        adc_pins = list(range(0,4))
         read_adc_for("valve1_current")
         read_adc_for("5v_sense")
         read_adc_for("temp_sense")
         read_adc_for("this_should_fail")
         read_adc_for("all")
+#        adc_addresses = [0x48, 0x49, 0x4a, 0x4b]
+#        adc_pins = list(range(0,4))
 #        for addr in adc_addresses:
 #            for pin in adc_pins:
 #                timenow = str(datetime.now())
