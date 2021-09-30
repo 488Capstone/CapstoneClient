@@ -376,8 +376,8 @@ def read_adc_wrap (select, verbose=True):
             "valve6_current": [0x49, 1],
             "solar_current" : [0x49, 2],
             "ps_current"    : [0x49, 3],
-            "5v_sense"      : [0x51, 0],
-            "temp_sense"    : [0x50, 1]
+            "5v_sense"      : [0x4b, 0],
+            "temp_sense"    : [0x4a, 1]
             }
     if select in choices:
         choice = choices[select]
