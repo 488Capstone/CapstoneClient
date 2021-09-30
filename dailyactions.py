@@ -365,31 +365,65 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     else:
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
-def read_adc_wrap (select, verbose=True):
-    val, volt = 0, 0
+# DW function used as an internal wrapper around code that is the same between two branches of the read_adc_for function
+def read_adc_for_internal (select, arglist, verbose=True):
+    addr = arglist[0]
+    pin = arglist[1]
+    unit = arglist[2]
+    if len(arglist) > 3:
+        gain = arglist[4]
+    else:
+        gain = 1
+    val, volt = read_adc(addr, pin)
+    volt = gain*volt #convert back to original magnitude before the sense ratio was applied
+    if verbose:
+        timenow = str(datetime.now())
+        #print(f"{timenow}---{select}: ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
+        print(f"{timenow}---{select}: {volt} {unit}")
+    return volt
+
+# DW This function is a convenience wrapper around the read_adc. You use the pin/net name from the schematic of our PC board 
+#   to tell it what value to read/return!
+    #DW 2021-09-29-20:12 if 'all' is selected, loop through all options and return a dict instead of a single atom value
+    # if 'all' is not selected, it returns a single value which is the numerical result that's already transferred back
+    # to the original signal value
+def read_adc_for (select, verbose=True):
+    rtrnval = 0
+            #DW 2021-09-29-19:51 format is:
+            #"<name of selection": [<I2C addr of adc>, <pin of adc>, <unit of measurement>, <optional gain used to convert back to original scale>],
+            #for the gain, if the Rdivider had a transfer func of 1/(2+1)=0.333 then the inverse gain will be (0.333)^-1= (1/3)^-1 = 3, so multiplying by 3 
+            #puts the voltage level back at the magnitude of what we were sensing
+            #TODO need to add the gain terms for the currents
+            #TODO need to add the gain terms for temp sense
     choices = {
-            "valve1_current": [0x48, 0],
-            "valve2_current": [0x48, 1],
-            "valve3_current": [0x48, 2],
-            "valve4_current": [0x48, 3],
-            "valve5_current": [0x49, 0],
-            "valve6_current": [0x49, 1],
-            "solar_current" : [0x49, 2],
-            "ps_current"    : [0x49, 3],
-            "5v_sense"      : [0x4b, 0],
-            "temp_sense"    : [0x4a, 1]
+            "valve1_current": [0x48, 0, 'A'],
+            "valve2_current": [0x48, 1, 'A'],
+            "valve3_current": [0x48, 2, 'A'],
+            "valve4_current": [0x48, 3, 'A'],
+            "valve5_current": [0x49, 0, 'A'],
+            "valve6_current": [0x49, 1, 'A'],
+            "solar_current" : [0x49, 2, 'A'],
+            "ps_current"    : [0x49, 3, 'A'],
+            "vbatt_sense"   : [0x4a, 0, 'V', (49.9+523)/49.9],
+            "temp_sense"    : [0x4a, 1, 'deg_C'],
+            "pot"           : [0x4a, 2, 'V'],
+            "5v_sense"      : [0x4b, 0, 'V', (49.9+102)/49.9],
+            "9v_sense"      : [0x4b, 1, 'V', (49.9+221)/49.9],
+            "solar_sense"   : [0x4b, 2, 'V', (49.9+523)/49.9],
+            "vin_sense"     : [0x4b, 3, 'V', (49.9+523)/49.9]
             }
-    if select in choices:
+    #DW 2021-09-29-20:12 if 'all' is selected, loop through all options and return a dict instead of a single atom value
+    if select == 'all':
+        rtrnval = {}
+        for key in choices.keys():
+            choice = choices[key]
+            rtrnval[key] = read_adc_for_internal(select, choice, verbose=verbose)
+    elif select in choices:
         choice = choices[select]
-        addr = choice[0]
-        pin = choice[1]
-        val, volt = read_adc(addr, pin)
-        if verbose:
-            timenow = str(datetime.now())
-            print(f"{timenow}---{select}: ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
+        rtrnval = read_adc_for_internal(select, choice, verbose=verbose)
     else:
         print(f"Select:'{select}' is not an option in Choices:[{choices.keys()}]")
-    return val, volt
+    return rtrnval
 
 ##############################################
 #                                            #
@@ -472,15 +506,16 @@ if __name__ == "__main__":
         print("{}---DEV: ADC ".format(str(datetime.now())))
         adc_addresses = [0x48, 0x49, 0x4a, 0x4b]
         adc_pins = list(range(0,4))
-        read_adc_wrap("valve1_current")
-        read_adc_wrap("5v_sense")
-        read_adc_wrap("temp_sense")
-        read_adc_wrap("this_should_fail")
-        for addr in adc_addresses:
-            for pin in adc_pins:
-                timenow = str(datetime.now())
-                print(f"{timenow}---READING: ADC(0x{addr:02x})-PIN({pin})")
-                val, volt = read_adc(addr, pin)
-                timenow = str(datetime.now())
-                print(f"{timenow}---ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
-
+        read_adc_for("valve1_current")
+        read_adc_for("5v_sense")
+        read_adc_for("temp_sense")
+        read_adc_for("this_should_fail")
+        read_adc_for("all")
+#        for addr in adc_addresses:
+#            for pin in adc_pins:
+#                timenow = str(datetime.now())
+#                print(f"{timenow}---READING: ADC(0x{addr:02x})-PIN({pin})")
+#                val, volt = read_adc(addr, pin)
+#                timenow = str(datetime.now())
+#                print(f"{timenow}---ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
+#
