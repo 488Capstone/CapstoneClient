@@ -72,15 +72,14 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
         appid = "ae7cc145d2fea84bea47dbe1764f64c0"
         start = round(time.time()-window)
         end = round(time.time())
-        # print(f'lat: {lat_w}, long: {long_w}, start: {start}, stop: {end}')
-        # url = f"http://history.openweathermap.org/data/2.5/history/city?lat={lat_w}&lon={long_w}&start={start}&end={end}&appid={appid}"
+
         url = "http://history.openweathermap.org/data/2.5/history/city?lat={}&lon={}&start={}&end={}&appid={}" \
             .format(lat_w, long_w, start, end, appid)
         payload, headers = {}, {}
         response = requests.request("GET", url, headers=headers, data=payload)
         return json.loads(response.text)  # pulls weather data
 
-    def parseweather(lat_pw, long_pw): # -> list[HistoryItem]:  # parses weather data pulled from getweather()
+    def parseweather(lat_pw, long_pw): # -> list[HistoryItem]:
         """Returns list of HistoryItems populated with weather data (missing solar)"""
         weather_history_list = []
 
