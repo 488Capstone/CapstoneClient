@@ -1,10 +1,22 @@
 #!/usr/bin/python3
 
+
+
 # todo: scheduler to reqs
-import RPi.GPIO as GPIO
+
 from datetime import datetime, timedelta
+import os
 import sys
 import schedule
+
+def isOnRaspi ():
+    return os.path.exists("/sys/firmware/devicetree/base/model")
+
+on_raspi = isOnRaspi()
+if on_raspi:
+    # this try/except lets code function outside of raspberry pi for development.
+    import RPi.GPIO as GPIO
+    pass
 
 # zone 1: GPIO19, zone 2: GPIO26, zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
 zone_lookup = (19, 26, 18, 23, 24, 25)
@@ -58,7 +70,7 @@ def cleanup():
     GPIO.cleanup()
 
 
-test_mode = False
+test_mode = True
 
 
 # todo take list of zones, durations via CLI
