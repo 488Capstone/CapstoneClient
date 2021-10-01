@@ -10,7 +10,7 @@ import requests
 import json
 from datetime import date, datetime
 from crontab import CronTab
-from capstoneclient.models import SensorEntry, SystemZoneConfig, HistoryItem
+from capstoneclient.models import SensorEntry, SystemConfig, ZoneConfig, HistoryItem
 from capstoneclient.db_manager import DBManager
 
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
@@ -269,7 +269,7 @@ def et_calculations(h_i: HistoryItem) -> HistoryItem:  # string passed determine
 
 
 # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
-def water_algo(zone: SystemZoneConfig) -> int:
+def water_algo(zone: ZoneConfig) -> int:
     """Calls water_scheduler with attributes from given zone [SystemZoneConfig]. Then outputs session time [int]."""
     waterdata = zone
     watering_days = []
@@ -386,7 +386,6 @@ if __name__ == "__main__":
 
     if not choice:
         print("dailyactions.py: called with no sys.arg")
-        return
 
     #probe('choice')
     #probe('logFile')
@@ -421,8 +420,8 @@ if __name__ == "__main__":
         # TODO: daily weather history updates / ET recalculations
         # TODO: rework watering tasks pursuant to ET recalculations
         #TODO make work with all zones
-        my_sys = db.get(SystemZoneConfig, "system")
-        zone1 = db.get(SystemZoneConfig, "zone1")
+        my_sys = db.get(SystemConfig, "system")
+        zone1 = db.get(ZoneConfig, "zone1")
 
         #TODO why is my_sys.water_deficit returning None?
         waterdeficit = my_sys.water_deficit or 0.1

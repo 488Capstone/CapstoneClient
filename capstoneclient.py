@@ -22,7 +22,7 @@ from dailyactions import (
     isOnRaspi,
 )
 from capstoneclient.db_manager import DBManager
-from capstoneclient.models import SystemZoneConfig
+from capstoneclient.models import SystemConfig, ZoneConfig
 
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
@@ -351,7 +351,7 @@ def application_rate_cal():
     )
 
     # look to db for a zone 1 config, if none add it, if there update it
-    zone_1 = db.get(SystemZoneConfig, "zone1")
+    zone_1 = db.get(ZoneConfig, "zone1")
     zone_1.application_rate = new_application_rate
     db.add(zone1)  # add/update object
 
@@ -409,9 +409,9 @@ db = DBManager()
 db.start_databases()
 
 
-my_sys = db.get(SystemZoneConfig, "system")
+my_sys = db.get(SystemConfig, "system")
 
-zone1 = db.get(SystemZoneConfig, "zone1")
+zone1 = db.get(ZoneConfig, "zone1")
 
 if on_raspi:
     raspi_testing()

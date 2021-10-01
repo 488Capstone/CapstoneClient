@@ -167,7 +167,7 @@ class Schedule(List):
         pass
 
 
-test_mode = True
+test_mode = 0
 if test_mode:
     # sys_config = SystemConfig()
     # print (sys_config)
