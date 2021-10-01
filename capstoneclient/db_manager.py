@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from models import Base, SystemZoneConfig, SensorEntry, HistoryItem
+from models import Base, SystemConfig, ZoneConfig, SensorEntry, HistoryItem
 import os
 
 
@@ -20,7 +20,7 @@ class DBManager:
     def start_databases(self):
         """ Initializes database from models, creates tables if not present."""
         Base.metadata.create_all(self.engine)
-        if not self.get(SystemZoneConfig, "system"):
+        if not self.get(SystemConfig, "system"):
             self.setup_system()
 
     def close(self):
@@ -41,12 +41,12 @@ class DBManager:
         return self.my_session.get(classname, key)
 
     def setup_system(self):
-        new_system = SystemZoneConfig(id="system", setup_complete=False)
+        new_system = SystemConfig(id="system", setup_complete=False)
         self.add(new_system)
         # todo: num_zones to system db
         num_zones = 1
         for r in range(1):
-            new_zone = SystemZoneConfig(id="zone"+str(r+1))
+            new_zone = ZoneConfig(id="zone"+str(r+1))
             self.add(new_zone)
 
 
