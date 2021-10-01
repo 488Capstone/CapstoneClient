@@ -62,6 +62,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
 
     def getsolar(lat_s, long_s):  # pulls solar data
         apikey, payload, headers = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ", {}, {}
+        # todo: remind mysolf why i'm not using days here, gets a week of data when 1 day is default
         hours = 168
         url = "https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={}&latitude={}&longitude={}&hours={}&format=json".format(apikey, lat_s, long_s, hours)
         response = requests.request("GET", url, headers=headers, data=payload)
@@ -382,6 +383,10 @@ if __name__ == "__main__":
     #DW the reason he had it set to 0 might be because when importing the file in capstoneclient.py it would throw and error if set to 1!
     #TODO DW 2021-09-23-13:27 need to check number of args first. Could create an error
     choice = sys.argv[1]
+
+    if not choice:
+        print("dailyactions.py: called with no sys.arg")
+        return
 
     #probe('choice')
     #probe('logFile')
