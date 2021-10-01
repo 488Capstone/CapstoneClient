@@ -1,8 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from models import Base, SystemConfig, ZoneConfig, SensorEntry, HistoryItem
+# dont know why i have to add capstoneclient below.. same dir but this clears error
+from capstoneclient.models import Base, SystemConfig, ZoneConfig, SensorEntry, HistoryItem
 import os
 
+os.environ['SIOclientDir'] = "pwd"
 
 class DBManager:
 
