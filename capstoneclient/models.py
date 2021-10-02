@@ -2,6 +2,7 @@ from datetime import datetime, time, timedelta
 from typing import List
 from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.sqltypes import Enum, PickleType
 
 import calendar
@@ -48,14 +49,51 @@ class SensorEntry(Base):
 class HistoryItem(Base):
     __tablename__ = "weather_history_data"
     date = Column(Date, primary_key=True)
-    windspeed = Column(Float)
-    solar = Column(Float)
-    tmax = Column(Float)
-    tmin = Column(Float)
-    rh = Column(Float)
+    windspeed = Column(Float)  # wind - meters per second
+    solar = Column(Float)  # shortwave solar radiation in  MJ / (m^2 * d)
+    tmax = Column(Float)  # daily max temp in Celsius
+    tmin = Column(Float)  # daily min temp in Celsius
+    rh = Column(Float)  # daily average relative humidity
     pressure = Column(Float)
     precip = Column(Float)
     etcalc = Column(Float)
+    water_deficit = Column(Float)
+
+    def calculate_et_and_water_deficit(self) -> null: 
+        """Call to generate et to populate et field in History Item"""
+        # todo: check these have reasonable values    
+        # stretch: account for longwave solar radiation
+         
+        rh_decimal = self.rh / 100  # daily average relative humidity as a decimal
+        pressure = self.pressure / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
+
+        # daily mean air temp in Celsius:
+        T = (self.T_max + self.T_min) / 2
+
+        # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
+        G = 0
+
+        e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
+        e_omin = 0.6108 ** ((17.27 * self.T_min) / (self.T_min + 237.3))
+        e_omax = 0.6108 ** ((17.27 * self.T_max) / (self.T_max + 237.3))
+        e_s = (e_omin + e_omax) / 2
+        e_a = rh_decimal * e_omean
+
+        delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
+        psycho = 0.000665 * pressure  # from ASCE standardized reference
+        C_n = 900  # constant from ASCE standardized reference
+        C_d = 0.34  # constant from ASCE standardized reference
+        temp_solar = 1
+        if self.solar is not None:
+            #print("solar data was None. Setting to 1 to bypass issue")
+            temp_solar = self.solar
+        et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
+        et_den = delta + psycho * (1 + C_d * wind)
+
+        etmm = et_num / et_den  # millimeters per day
+        et = etmm / 25.4  # inches per day
+        self.etcalc = et
+        self.water_deficit = self.et - self.precip
 
     def __repr__(self):
         return f"<HistoryItem date={self.date}, " \

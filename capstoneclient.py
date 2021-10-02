@@ -99,10 +99,13 @@ def my_system():
 
     print("System Data:")
     print(f"Location: {my_sys.city}, {my_sys.state}, {my_sys.zipcode}")
+    print(f"Enabled zones: {my_sys.zones_enabled}.")
+    # todo sensors shown here
     print(
         f"Zone 1 soil is primarily {zone1.soil_type}. "
         f"Application rate is {zone1.application_rate} inches per hour."
     )
+    
     input("Press any key to continue.")
 
 
@@ -181,62 +184,6 @@ def my_schedule():
     if auto_man in ["M", "m"]:
         print("Manual watering control selected.")
         manual_zone_setup(int(i))
-    
-
-
-    
-        
-
-
-
-    # TECHNICAL DEBT! This code is not hardened against all possible inputs.
-    # schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    # days = []  # init empty array
-
-    # # dump every ZoneControl task into days array:
-    # for tasks in schedule:
-    #     if tasks.comment == ZONE_CONTROL_COMMENT_NAME:
-    #         days.append(
-    #             [str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])]
-    #         )
-
-    # # parse days array into usable strings:
-    # day_string = ""
-    # for x in range(len(days)):
-    #     if days[x][0] == "MON":
-    #         days[x][0] = "Monday"
-    #     elif days[x][0] == "TUE":
-    #         days[x][0] = "Tuesday"
-    #     elif days[x][0] == "WED":
-    #         days[x][0] = "Wednesday"
-    #     elif days[x][0] == "THU":
-    #         days[x][0] = "Thursday"
-    #     elif days[x][0] == "FRI":
-    #         days[x][0] = "Friday"
-    #     elif days[x][0] == "SAT":
-    #         days[x][0] = "Saturday"
-    #     elif days[x][0] == "SUN":
-    #         days[x][0] = "Sunday"
-
-    #     if days[x][1] == "0":
-    #         days[x][1] = "00"
-
-    #     if int(days[x][2]) < 12:
-    #         days[x][1] = days[x][1] + "AM"
-    #     else:
-    #         days[x][1] = days[x][1] + "PM"
-
-    #     if x + 1 == len(days):
-    #         day_string = day_string + "and " + days[x][0]
-    #     else:
-    #         day_string = day_string + days[x][0] + ", "
-    # print("Zone 1 is currently scheduled to run on {}.".format(day_string))
-    # for x in range(len(days)):
-    #     print(
-    #         "On {}, zone 1 will run for {} minutes starting at {}:{}.".format(
-    #             days[x][0], days[x][3], days[x][2], days[x][1]
-    #         )
-    #     )
 
 
 def startup():
@@ -256,9 +203,10 @@ def startup():
                 print("Enabled Zones saved")
                 matches = True
                 new_enabled_zones = []
-                for char in i:
-                    new_enabled_zones.append(int(char))
-                    my_sys.zones_enabled = new_enabled_zones
+                for x in range(len(i)):
+                    if int(i[x]) == 1:
+                        new_enabled_zones.append(x+1)
+                my_sys.zones_enabled = new_enabled_zones
                     
 
 
@@ -290,79 +238,70 @@ def startup():
     print("Database of historical environmental data built.")
 
     # build system info:
-    print("Lets talk about Zone 1, since this is a limited prototype and all.")
-    soil_type = input(
-        "What is the predominant soil type in this zone? [limit answers to 'sandy' or "
-        "'loamy']"
-    )
-    while soil_type != ("sandy" or "loamy"):
+    print("Set up each of the enabled zones")
+
+    for i in len(my_sys.zones_enabled):
+        current_zone = zone_list[my_sys.zones_enabled[i]-1]
+        print("ZONE"+" "+str(i+1))
         soil_type = input(
-            "Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or "
-            "loamy?"
+            str()+"What is the predominant soil type in this zone? [limit answers to 'sandy' or "
+            "'loamy']"
         )
+        while soil_type != ("sandy" or "loamy"):
+            soil_type = input(
+                "Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or "
+                "loamy?"
+            )
 
-    zone1.soil_type = soil_type
+        current_zone.soil_type = soil_type
 
-    # TECHNICAL DEBT! improve user selection of watering days and times.
-    if soil_type == "sandy":
+        # TECHNICAL DEBT! improve user selection of watering days and times.
+        if soil_type == "sandy":
+            print(
+                "Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy."
+            )
+            print("Three days a week should do nicely. Lets say Mon-Weds-Fri for now.")
+
+            (
+                zone1.waterSun,
+                zone1.waterMon,
+                zone1.waterTue,
+                zone1.waterWed,
+                zone1.waterThu,
+                zone1.waterFri,
+                zone1.waterSat,
+            ) = (0, 1, 0, 1, 0, 1, 0)
+
+        elif soil_type == "loamy":
+            print(
+                "Your loamy soil will hold water well. We recommend picking one watering day a week."
+            )
+            print("We'll make it easy and pick Wednesday for now.")
+            (
+                current_zone.waterSun,
+                current_zone.waterMon,
+                current_zone.waterTue,
+                current_zone.waterWed,
+                current_zone.waterThu,
+                current_zone.waterFri,
+                current_zone.waterSat,
+            ) = (0, 0, 0, 1, 0, 0, 0)
+
+        # TECHNICAL DEBT! Prototype doesn't allow changing the time of day for watering.
+        current_zone.application_rate = 1.5
+        current_zone.pref_time_hrs = "09"
+        current_zone.pref_time_min = "00"
+        db.add(current_zone)  # add/update object
+
         print(
-            "Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy."
-        )
-        print("Three days a week should do nicely. Lets say Mon-Weds-Fri for now.")
-
-        (
-            zone1.waterSun,
-            zone1.waterMon,
-            zone1.waterTue,
-            zone1.waterWed,
-            zone1.waterThu,
-            zone1.waterFri,
-            zone1.waterSat,
-        ) = (0, 1, 0, 1, 0, 1, 0)
-
-    elif soil_type == "loamy":
-        print(
-            "Your loamy soil will hold water well. We recommend picking one watering day a week."
-        )
-        print("We'll make it easy and pick Wednesday for now.")
-        (
-            zone1.waterSun,
-            zone1.waterMon,
-            zone1.waterTue,
-            zone1.waterWed,
-            zone1.waterThu,
-            zone1.waterFri,
-            zone1.waterSat,
-        ) = (0, 0, 0, 1, 0, 0, 0)
-
-    # TECHNICAL DEBT! Prototype doesn't allow changing the time of day for watering.
-    zone1.application_rate = 1.5
-    zone1.pref_time_hrs = "09"
-    zone1.pref_time_min = "00"
-
-    print(
-        "Okay, it looks like we have everything we need to calculate your water needs. We'll do that now."
-    )
-    waterdeficit = 0
-    for x in range(7):
-        waterdeficit += history_items_list[x].etcalc
-
-    print("Now to account for accumulated precipitation...")
-    for x in range(7):
-        waterdeficit -= history_items_list[x].precip
-
-    zone1.water_deficit = waterdeficit
-    db.add(zone1)  # add/update object
+            "Okay, it looks like we have everything we need to calculate your water needs. We'll do that now."
+        )  
 
     # TECHNICAL DEBT - how much did you water your lawn over the past week?
 
-    water_algo(zone1)
+    water_algo(current_zone)
     print("Beep...Bop...Boop...")
-    print(
-        "Judging by the past week, you have a total water deficit of {} inches.".format(
-            str(waterdeficit)
-        )
-    )
+    print(f"Judging by the past week, you have a total water deficit of {waterdeficit} inches.")
 
     print("Creating recurring tasks...")
     task_scheduler()
@@ -511,8 +450,14 @@ db.start_databases()
 
 
 my_sys = db.get(SystemConfig, "system")
-
 zone1 = db.get(ZoneConfig, "zone1")
+zone2 = db.get(ZoneConfig, "zone2")
+zone3 = db.get(ZoneConfig, "zone3")
+zone4 = db.get(ZoneConfig, "zone4")
+zone5 = db.get(ZoneConfig, "zone5")
+zone6 = db.get(ZoneConfig, "zone6")
+
+zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
 
 if on_raspi:
     raspi_testing()

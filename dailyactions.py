@@ -55,7 +55,7 @@ else:
 #############################################################################
 #    Queries APIs weather/solar data and dumps it into db table "HISTORY"   #
 #############################################################################
-def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> list[HistoryItem]:
+def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list[HistoryItem]:
     """Returns list of HistoryItems, one for each of preceding given days [Int] at given lat [Float], long [Float]."""
 
     print(f"gethistoricaldata({days}) has begun")
@@ -157,7 +157,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
 
         return weather_history_list
 
-    def parsesolar(lat_ps: float, long_ps: float, wl: list): #-> list[HistoryItem]:
+    def parsesolar(lat_ps: float, long_ps: float, wl: list) -> list[HistoryItem]:
         print("parsesolar() begins.")
 
         wl_ps = wl
@@ -215,57 +215,11 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
 
     # generate list of day items with weather data, apply solar data to matching days
     weather_list = parseweather(latitude, longitude)
-    weather_solar_list = parsesolar(latitude, longitude, weather_list)   # Queries APIs weather/solar data and dumps it into db table "HISTORY"
-    final_list = []
+    weather_solar_list = parsesolar(latitude, longitude, weather_list) 
     # apply et data to each daily item
     for item in weather_solar_list:
-        final_list.append(et_calculations(item))
-    return final_list
-
-
-############################################################################
-#    calculates ET for a given date based on weather history data in db    #
-############################################################################
-def et_calculations(h_i: HistoryItem) -> HistoryItem:  # string passed determines what day ET is evaluated for
-    """Takes a HistoryItem, returns HistoryItem with etcalc for given windspeed, solar, tmax, tmin, rh, and pressure."""
-    # todo: check these have reasonable values
-    history_item = h_i
-    wind = history_item.windspeed  # wind - meters per second,
-    # stretch: account for longwave solar radiation
-    solar = history_item.solar  # shortwave solar radiation in  MJ / (m^2 * d)
-    T_max = history_item.tmax  # daily max temp in Celsius
-    T_min = history_item.tmin  # daily min temp in Celsius
-
-    rh = history_item.rh / 100  # daily average relative humidity as a decimal
-    pressure = history_item.pressure / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
-
-    # daily mean air temp in Celsius:
-    T = (T_max + T_min) / 2
-
-    # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
-    G = 0
-
-    e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
-    e_omin = 0.6108 ** ((17.27 * T_min) / (T_min + 237.3))
-    e_omax = 0.6108 ** ((17.27 * T_max) / (T_max + 237.3))
-    e_s = (e_omin + e_omax) / 2
-    e_a = rh * e_omean
-
-    delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
-    psycho = 0.000665 * pressure  # from ASCE standardized reference
-    C_n = 900  # constant from ASCE standardized reference
-    C_d = 0.34  # constant from ASCE standardized reference
-    if solar is None:
-        print("solar data was None. Setting to 1 to bypass issue")
-        solar = 1
-    et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
-    et_den = delta + psycho * (1 + C_d * wind)
-
-    etmm = et_num / et_den  # millimeters per day
-    et = etmm / 25.4  # inches per day
-
-    history_item.etcalc = et
-    return history_item
+        item.calculate_et_and_water_deficit()
+    return weather_solar_list
 
 
 # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
