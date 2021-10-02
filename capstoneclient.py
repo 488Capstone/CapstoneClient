@@ -108,7 +108,7 @@ def my_system():
 
 
 # my_schedule() displays basic scheduling data when requested from op_menu()
-def my_schedule(zone: int):
+def my_schedule():
 
     
 

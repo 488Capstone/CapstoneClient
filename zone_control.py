@@ -70,7 +70,7 @@ def cleanup():
     GPIO.cleanup()
 
 
-test_mode = True
+test_mode = False
 
 
 # todo take list of zones, durations via CLI
