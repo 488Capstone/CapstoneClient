@@ -1,11 +1,11 @@
 from datetime import datetime, time, timedelta
+import calendar
 from typing import List
+
 from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.expression import null
 from sqlalchemy.sql.sqltypes import Enum, PickleType
-
-import calendar
 
 
 Base = declarative_base()
@@ -59,26 +59,21 @@ class HistoryItem(Base):
     etcalc = Column(Float)
     water_deficit = Column(Float)
 
+
     def calculate_et_and_water_deficit(self) -> null: 
-        """Call to generate et to populate et field in History Item"""
+        """Call to generate and populate calculated values for History Item"""
         # todo: check these have reasonable values    
         # stretch: account for longwave solar radiation
          
         rh_decimal = self.rh / 100  # daily average relative humidity as a decimal
         pressure = self.pressure / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
-
-        # daily mean air temp in Celsius:
-        T = (self.T_max + self.T_min) / 2
-
-        # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
-        G = 0
-
+        T = (self.T_max + self.T_min) / 2  # daily mean air temp in Celsius:
+        G = 0  # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
         e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
         e_omin = 0.6108 ** ((17.27 * self.T_min) / (self.T_min + 237.3))
         e_omax = 0.6108 ** ((17.27 * self.T_max) / (self.T_max + 237.3))
         e_s = (e_omin + e_omax) / 2
         e_a = rh_decimal * e_omean
-
         delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
         psycho = 0.000665 * pressure  # from ASCE standardized reference
         C_n = 900  # constant from ASCE standardized reference
@@ -87,8 +82,8 @@ class HistoryItem(Base):
         if self.solar is not None:
             #print("solar data was None. Setting to 1 to bypass issue")
             temp_solar = self.solar
-        et_num = 0.408 * delta * (solar - G) + psycho * (C_n / (T + 273)) * wind * (e_s - e_a)
-        et_den = delta + psycho * (1 + C_d * wind)
+        et_num = 0.408 * delta * (self.solar - G) + psycho * (C_n / (T + 273)) * self.wind * (e_s - e_a)
+        et_den = delta + psycho * (1 + C_d * self.wind)
 
         etmm = et_num / et_den  # millimeters per day
         et = etmm / 25.4  # inches per day
@@ -107,7 +102,6 @@ class HistoryItem(Base):
                f"etcalc = {self.etcalc}>"
 
 
-# SYSTEM table holds data on both zones and the system as a whole. Some columns are only for zone/system data.
 class SystemConfig(Base):
     __tablename__ = "system_configuration"
     id = Column(String, primary_key=True)
@@ -153,7 +147,6 @@ class ZoneConfig(Base):
     manual_schedule = Column(PickleType)
     scheduleString = Column(String)
     is_manual_mode = Column(Boolean)
-
 
 
 class ScheduleEntry():
@@ -212,32 +205,5 @@ class Schedule(List):
 
 test_mode = 0
 if test_mode:
-    # sys_config = SystemConfig()
-    # print (sys_config)
-
-    mysched = Schedule()
-    days = [1, 3, 5]
-    mytime1 = time(7, 30)
-    mytime2 = time(19, 30)
-    times = [mytime1, mytime2]
-    mysched.add_entries(days, times, 20)
-    print(mysched.get_next_entry())
-    mysched.clear_entries()
-    print(mysched.get_next_entry())
-
-    
-
-
-    # mysched = [i for i in mysched if i.day_num >= datetime.today().weekday()]  # keep days >= today
-    # mysched.sort(key=lambda x: (x.day_num, x.start_time.strftime('%H:%M')))  # sort by day increasing
-    
-
-    # mysched.sort(key=lambda x: (x.day_num, x.start_time.strftime('%H:%M')))
-
-    # j2 = [i for i in mysched if i.start_time > datetime.now().time()]
-   
-
-
-    # print(j2[-1])
 
     pass

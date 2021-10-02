@@ -4,6 +4,10 @@ from sqlalchemy.orm import sessionmaker, Session
 from capstoneclient.models import Base, SystemConfig, ZoneConfig, SensorEntry, HistoryItem
 import os
 
+import datetime
+
+from models import HistoryItem
+
 
 class DBManager:
 
@@ -49,6 +53,15 @@ class DBManager:
         for r in range(1):
             new_zone = ZoneConfig(id="zone"+str(r+1))
             self.add(new_zone)
+    
+    def get_previous_week_water_deficit(self):
+        one_week_ago = datetime.date(datetime.datetime.now() - datetime.timedelta(days = 7))
+        result = self.my_session.query(HistoryItem).filter(HistoryItem.date)
+        w_d = 0
+        for row in result:
+            w_d += row.water_deficit
+        
+        return w_d
 
 
 # use/test:

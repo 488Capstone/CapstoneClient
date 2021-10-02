@@ -28,6 +28,8 @@ from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
 from zone_control import open_all, close_all
 
+from capstoneclient.db_manager import get_previous_week_water_deficit
+
 
 DWDBG = False
 
@@ -299,9 +301,11 @@ def startup():
 
     # TECHNICAL DEBT - how much did you water your lawn over the past week?
 
+    water_deficit = get_previous_week_water_deficit()
+
     water_algo(current_zone)
     print("Beep...Bop...Boop...")
-    print(f"Judging by the past week, you have a total water deficit of {waterdeficit} inches.")
+    print(f"Judging by the past week, you have a total water deficit of {water_deficit} inches.")
 
     print("Creating recurring tasks...")
     task_scheduler()
