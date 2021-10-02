@@ -282,19 +282,6 @@ def raspi_testing():
     # todo figure prevent error without source
     # schedule = Schedule()
     # sense = Sensors()
-    baro_data = [0, 0, 0]
-    soil_data = [0, 0]
-    try:
-        soil_data = read_soil_sensor()
-    except Exception as e:
-        print(f" Read Failed, {repr(e)}")
-    try:
-        baro_data = read_baro_sensor()
-
-    except Exception as e:
-        print(f" Read Failed, {repr(e)}")
-    sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
-
     print("Welcome aboard, matey.")
     print("Menu:")
     print("1: Check sensor readings.")
@@ -306,6 +293,27 @@ def raspi_testing():
         print("Exiting program")
         exit()
     if choice == '1':
+        baro_data = [0, 0, 0]
+        soil_data = [0, 0]
+        try:
+            soil_data = read_soil_sensor()
+        except Exception as e:
+            devName = "Soil Moist/Temp Sensor"
+            print("{0} Read Failed.\t{1}".format(devName, repr(e)))
+            import traceback
+            errMsg = traceback.format_exc()
+            print(errMsg)
+        try:
+            baro_data = read_baro_sensor()
+        except Exception as e:
+            devName = "Soil Moist/Temp Sensor"
+            print("{0} Read Failed.\t{1}".format(devName, repr(e)))
+            import traceback
+            errMsg = traceback.format_exc()
+            print(errMsg)
+
+        sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
+
         print("Sensor data:")
         print("Timestamp: ", sensor_data[0])
         print("Temperature: ", sensor_data[1])
@@ -316,7 +324,8 @@ def raspi_testing():
     elif choice == '3':
         startup()
     else:
-        print("You have chosen...poorly.")
+        print("Input not matched to available option")
+        print("Exiting program")
         sys.exit()
 
 
