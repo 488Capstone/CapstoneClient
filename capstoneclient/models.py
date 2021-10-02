@@ -70,8 +70,8 @@ class HistoryItem(Base):
         T = (self.tmax + self.tmin) / 2  # daily mean air temp in Celsius:
         G = 0  # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
         e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
-        e_omin = 0.6108 ** ((17.27 * self.T_min) / (self.T_min + 237.3))
-        e_omax = 0.6108 ** ((17.27 * self.T_max) / (self.T_max + 237.3))
+        e_omin = 0.6108 ** ((17.27 * self.tmin) / (self.tmin + 237.3))
+        e_omax = 0.6108 ** ((17.27 * self.tmax) / (self.tmax + 237.3))
         e_s = (e_omin + e_omax) / 2
         e_a = rh_decimal * e_omean
         delta = (2503 ** ((17.27 * T) / (T + 237.3))) / ((T + 237.3) ** 2)
@@ -82,8 +82,8 @@ class HistoryItem(Base):
         if self.solar is not None:
             #print("solar data was None. Setting to 1 to bypass issue")
             temp_solar = self.solar
-        et_num = 0.408 * delta * (self.solar - G) + psycho * (C_n / (T + 273)) * self.wind * (e_s - e_a)
-        et_den = delta + psycho * (1 + C_d * self.wind)
+        et_num = 0.408 * delta * (self.solar - G) + psycho * (C_n / (T + 273)) * self.windspeed * (e_s - e_a)
+        et_den = delta + psycho * (1 + C_d * self.windspeed)
 
         etmm = et_num / et_den  # millimeters per day
         et = etmm / 25.4  # inches per day
