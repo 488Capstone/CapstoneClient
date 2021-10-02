@@ -57,11 +57,12 @@ class DBManager:
     def get_previous_week_water_deficit(self):
         one_week_ago_dt = datetime.datetime.now() - datetime.timedelta(days = 7)
         one_week_ago_date = one_week_ago_dt.date()
-        result = self.my_session.query(HistoryItem).filter(HistoryItem.date)
+        result = self.my_session.query(HistoryItem).filter(HistoryItem.date >= one_week_ago_date)
         w_d = 0
         for row in result:
+            print(f"db_manager.get_previous_week... water deficit for day {row.date} is {row.water_deficit}")
             w_d += row.water_deficit
-        
+        print(f"last week water deficit is {w_d}")
         return w_d
 
 

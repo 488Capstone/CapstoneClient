@@ -302,10 +302,11 @@ def startup():
     # TECHNICAL DEBT - how much did you water your lawn over the past week?
 
     water_deficit = db.get_previous_week_water_deficit()
-
+    print(f"Judging by the past week, you have a total water deficit of {water_deficit} inches.")
+    
     water_algo(current_zone, my_sys.water_deficit)
     print("Beep...Bop...Boop...")
-    print(f"Judging by the past week, you have a total water deficit of {water_deficit} inches.")
+    
 
     print("Creating recurring tasks...")
     task_scheduler()
