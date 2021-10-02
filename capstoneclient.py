@@ -121,10 +121,7 @@ def my_schedule():
 
     def manual_zone_setup(zone_num: int):
         schedule = Schedule()
-        manual_zone_config = 0
-        i = input("Enter zone number (0 for all), or any other key to exit.")
-        if int(i) not in range(7):
-            return
+        
         i = input("Enter any desired watering days and times in this format: \n Mon 7-7:15, Mon 13-15, Tue 6-7, Wed 14:30-14:45, Thur, Fri, Sat, Sun \n ")
         
         mylist = i.split(', ')
@@ -171,8 +168,19 @@ def my_schedule():
     zones_enabled = [1]
     print("Schedule Setup:")
     print(f"Enabled zones: {zones_enabled}")
+
+    
+
     for zone_num in zones_enabled:
-        print(f"Zone #{zone_num}: AUTO, between 6AM and 6PM")
+        if not zone1.manual_schedule:
+            print(f"Zone #{zone_num}: MANUAL at these times:")
+        else:
+            print(f"Zone #{zone_num}: AUTO, at these times:")
+
+        for item in zone1.schedule:
+            print(item)
+
+        
     i = input("Press 0 to edit settings for all zones, 1-6 for a specific zone, or any other key to continue.")
 
     if int(i) not in range(7):
