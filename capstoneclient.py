@@ -389,7 +389,7 @@ def raspi_testing():
         print("Timestamp: ", sensor_data[0])
         print("Temperature: ", sensor_data[1])
         print("Barometric pressure: ", sensor_data[2])
-        print("Soil moisture: ", sensor_data[3])
+        print("Soil moisture, temperature: ", sensor_data[3])
     elif choice == "2":
         pass  # System.Zone.manual_control()
     elif choice == "3":

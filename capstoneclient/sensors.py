@@ -47,7 +47,12 @@ def read_baro_sensor():
     # TODO: remove humidity artifacts from baro method
     bus = smbus.SMBus(1)  # BME280 address, 0x76(118)
     # Read data back from 0x88(136), 24 bytes
-    b1 = bus.read_i2c_block_data(0x77, 0x88, 24)  # Convert the data
+    try:
+        b1 = bus.read_i2c_block_data(0x77, 0x88, 24)  # Convert the data
+    except Exception as e:
+        print(e)
+        data = [0, 0, 0, 0]
+        return data
 
     # Temp coefficients
     dig_T1 = b1[1] * 256 + b1[0]
