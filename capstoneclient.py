@@ -242,7 +242,7 @@ def startup():
     # build system info:
     print("Set up each of the enabled zones")
 
-    for i in len(my_sys.zones_enabled):
+    for i in range(len(my_sys.zones_enabled)):
         current_zone = zone_list[my_sys.zones_enabled[i]-1]
         print("ZONE"+" "+str(i+1))
         soil_type = input(
