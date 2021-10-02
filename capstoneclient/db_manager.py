@@ -4,7 +4,6 @@ from sqlalchemy.orm import sessionmaker, Session
 from capstoneclient.models import Base, SystemConfig, ZoneConfig, SensorEntry, HistoryItem
 import os
 
-os.environ['SIOclientDir'] = "pwd"
 
 class DBManager:
 
