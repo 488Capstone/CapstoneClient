@@ -119,29 +119,45 @@ def my_schedule():
 
     day_dict = {"Mon":0, "Tue":1, "Wed":2, "Thur":3, "Fri":4, "Sat":5, "Sun":6}
 
-    def manual_zone_setup():
+    def manual_zone_setup(zone_num: int):
         schedule = Schedule()
         manual_zone_config = 0
         i = input("Enter zone number (0 for all), or any other key to exit.")
         if int(i) not in range(7):
             return
-        i = input("Enter any desired watering days and times in this format:%nMon 7-7:15, Mon 13-15, Tue 6-7, Wed 14:30-14:45, Thur, Fri, Sat, Sun")
+        i = input("Enter any desired watering days and times in this format: \n Mon 7-7:15, Mon 13-15, Tue 6-7, Wed 14:30-14:45, Thur, Fri, Sat, Sun \n ")
         
         mylist = i.split(', ')
         try:
             for item in mylist:
+
                 item_split = item.split(' ')  # split day from times
                 day_num = day_dict.get(item_split[0])  
-                time_list = item_split[1].split('-')
-                start_time = datetime.time(time_list[0])
-                time_list[0] = datetime.timedelta(time_list[0])
-                time_list[1] = datetime.timedelta(time_list[1])
-                duration = time_list[1] - time_list[0]
+
+                start_time = 0
+
+                time_list = item_split[1].split('-')  # split to and from times
+                if ':' not in time_list[0]:  # no minutes
+                    start_datetime = datetime.datetime.strptime(time_list[0]+':00', '%H:%M')  # add minutes and make datetime
+                    start_time = datetime.time(start_datetime)
+                else:
+                    start_datetime = datetime.datetime.strptime(time_list[0], '%H:%M')  # make datetime
+                    start_time = datetime.time(start_datetime.hour, start_datetime.minute)
+                if ':' not in time_list[1]:  # no minutes
+                    finish_datetime = datetime.datetime.strptime(time_list[1]+':00', '%H:%M')  # add minutes and make datetime
+                else:
+                    finish_datetime = datetime.datetime.strptime(time_list[1], '%H:%M')  # make datetime
+                duration_delta = (finish_datetime - start_datetime)
+                duration = int(duration_delta.total_seconds() // 60)
+                
+
+
+
                 schedule_item = ScheduleEntry(day_num, start_time, duration)
                 schedule.append(schedule_item)
 
         except Exception as e:
-            print("Cannot parse")
+            print("Cannot parse: {e}")
         
         if schedule:
             zone1.schedule = schedule
@@ -170,7 +186,7 @@ def my_schedule():
         return
     if auto_man in ["M", "m"]:
         print("Manual watering control selected.")
-        manual_zone_setup()
+        manual_zone_setup(int(i))
     
 
 
