@@ -223,7 +223,7 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.) -> list
 
 
 # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
-def water_algo(zone: ZoneConfig) -> int:
+def water_algo(zone: ZoneConfig, water_deficit: float) -> int:
     """Calls water_scheduler with attributes from given zone [SystemZoneConfig]. Then outputs session time [int]."""
     waterdata = zone
     watering_days = []
@@ -245,7 +245,7 @@ def water_algo(zone: ZoneConfig) -> int:
     # TECHNICAL DEBT! Prototype only accounts for rotary sprinklers
     emitterefficiency = {"rotary": 0.7}
     effectiveapplicationrate = waterdata.application_rate * emitterefficiency["rotary"]
-    req_watering_time = (waterdata.water_deficit / effectiveapplicationrate) * 60  # total number of minutes needed
+    req_watering_time = (water_deficit / effectiveapplicationrate) * 60  # total number of minutes needed
     session_time = int(req_watering_time / len(watering_days))  # number of minutes per watering session
     if session_time < 0:
         session_time = 0
