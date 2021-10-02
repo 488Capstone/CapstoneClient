@@ -111,7 +111,6 @@ class SystemConfig(Base):
     lat = Column(Float)
     long = Column(Float)
     setup_complete = Column(Boolean)
-    water_deficit = Column(Float)
     zones_enabled = Column(PickleType)
 
     def __repr__(self):
@@ -121,9 +120,7 @@ class SystemConfig(Base):
                f"state = {self.state}, \n" \
                f"latitude = {self.lat}, \n" \
                f"longitude = {self.long}, \n" \
-               f"setup complete = {self.setup_complete}, \n" \
-               f"water_deficit = {self.water_deficit}, \n" \
-               f"zones_enabled = {self.zones_enabled} >"
+               f"setup complete = {self.setup_complete}, \n zones_enabled = {self.zones_enabled} >"
 
 class ZoneConfig(Base):
     __tablename__ = "zone_configuration"
