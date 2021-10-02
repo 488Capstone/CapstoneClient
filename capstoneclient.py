@@ -235,11 +235,16 @@ def startup():
     # get historical weather / solar data, build database.
     # This does the past week as a starting point for a water deficit.
 
+    # todo: instead of 1 week data, look for missing days in db and get data for those days
+
     history_items_list = gethistoricaldata(
         days=7, latitude=my_sys.lat, longitude=my_sys.long
     )
     for item in history_items_list:
-        db.my_session.add(item)
+        try:
+            db.my_session.add(item)
+        except Exception as e:
+            print("capstoneclient startup(): cant add history item to db (probably already there)")
         db.my_session.commit()
         
 
