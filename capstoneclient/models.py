@@ -80,6 +80,7 @@ class SystemConfig(Base):
     long = Column(Float)
     setup_complete = Column(Boolean)
     water_deficit = Column(Float)
+    zones_enabled = Column(PickleType)
 
     def __repr__(self):
         return f"<System Config: \n" \
@@ -89,7 +90,8 @@ class SystemConfig(Base):
                f"latitude = {self.lat}, \n" \
                f"longitude = {self.long}, \n" \
                f"setup complete = {self.setup_complete}, \n" \
-               f"water_deficit = {self.water_deficit} >"
+               f"water_deficit = {self.water_deficit}, \n" \
+               f"zones_enabled = {self.zones_enabled} >"
 
 class ZoneConfig(Base):
     __tablename__ = "zone_configuration"
@@ -110,8 +112,9 @@ class ZoneConfig(Base):
     pref_time_min = Column(String)
     application_rate = Column(Float)
     schedule = Column(PickleType)
+    manual_schedule = Column(PickleType)
     scheduleString = Column(String)
-    manual_schedule = Column(Boolean)
+    is_manual_mode = Column(Boolean)
 
 
 

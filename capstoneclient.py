@@ -4,11 +4,11 @@
 # this script contains setup and operation of the device.           #
 #####################################################################
 
-
-
 import os
+from re import match
 import sys
 import requests
+import re
 
 from crontab import CronTab
 
@@ -22,13 +22,12 @@ from dailyactions import (
     isOnRaspi,
 )
 from capstoneclient.db_manager import DBManager
-from capstoneclient.models import SystemConfig, ZoneConfig
+from capstoneclient.models import SystemConfig, ZoneConfig, ScheduleEntry, Schedule
 
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
 from zone_control import open_all, close_all
 
-from capstoneclient.models import ScheduleEntry, Schedule
 
 DWDBG = False
 
@@ -107,11 +106,7 @@ def my_system():
     input("Press any key to continue.")
 
 
-# my_schedule() displays basic scheduling data when requested from op_menu()
 def my_schedule():
-
-    
-
     # schedule is zone specific, saved in zone config
     # schedule can be auto-set or manual - manual ignores all inputs, schedule is auto adjusted
     
@@ -144,12 +139,10 @@ def my_schedule():
                     finish_datetime = datetime.datetime.strptime(time_list[1]+':00', '%H:%M')  # add minutes and make datetime
                 else:
                     finish_datetime = datetime.datetime.strptime(time_list[1], '%H:%M')  # make datetime
+
                 duration_delta = (finish_datetime - start_datetime)
                 duration = int(duration_delta.total_seconds() // 60)
                 
-
-
-
                 schedule_item = ScheduleEntry(day_num, start_time, duration)
                 schedule.append(schedule_item)
 
@@ -158,21 +151,14 @@ def my_schedule():
         
         if schedule:
             zone1.schedule = schedule
-            zone1.manual_schedule = True
+            zone1.is_manual_mode = True
             db.add(zone1)
-
-
-
-        
-        
-    zones_enabled = [1]
+     
     print("Schedule Setup:")
-    print(f"Enabled zones: {zones_enabled}")
+    print(f"Enabled zones: {my_sys.zones_enabled}")
 
-    
-
-    for zone_num in zones_enabled:
-        if not zone1.manual_schedule:
+    for zone_num in my_sys.zones_enabled:
+        if zone1.is_manual_mode:
             print(f"Zone #{zone_num}: MANUAL at these times:")
         else:
             print(f"Zone #{zone_num}: AUTO, at these times:")
@@ -255,7 +241,26 @@ def my_schedule():
 
 def startup():
 
+    my_sys.zones_enabled = [1]
+
     print("Excellent choice, sir. Startup protocol initiated.")
+
+    i = input("Enabled Zones: Zone1 is enabled by default. Change? [Y]es, or any other key to continue")
+    matches = False
+    if i in ['Y', 'y']:
+        while not matches:
+            i = input("Enter a string of six numbers (0's or 1's) for new configuration. Enabled=1, Disabled=0")
+            if not re.fullmatch(r"[01]{6}", i):
+                print("Like this: 101001")
+            else:
+                print("Enabled Zones saved")
+                matches = True
+                new_enabled_zones = []
+                for char in i:
+                    new_enabled_zones.append(int(char))
+                    my_sys.zones_enabled = new_enabled_zones
+                    
+
 
     # Get location data from IP address:
     loc = requests.get(
@@ -487,7 +492,7 @@ def raspi_testing():
         print("Barometric pressure: ", sensor_data[2])
         print("Soil moisture, temperature: ", sensor_data[3])
     elif choice == "2":
-        pass  # System.Zone.manual_control()
+        pass 
     elif choice == "3":
         startup()
     else:
