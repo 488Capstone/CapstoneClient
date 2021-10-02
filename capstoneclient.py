@@ -22,7 +22,7 @@ from dailyactions import (
     isOnRaspi,
 )
 from capstoneclient.db_manager import DBManager
-from capstoneclient.models import SystemConfig, ZoneConfig, ScheduleEntry, Schedule
+from capstoneclient.models import HistoryItem, SystemConfig, ZoneConfig, ScheduleEntry, Schedule
 
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
@@ -234,9 +234,15 @@ def startup():
 
     # get historical weather / solar data, build database.
     # This does the past week as a starting point for a water deficit.
+
     history_items_list = gethistoricaldata(
         days=7, latitude=my_sys.lat, longitude=my_sys.long
     )
+    for item in history_items_list:
+        db.my_session.add(item)
+        db.my_session.commit()
+        
+
     print("Database of historical environmental data built.")
 
     # build system info:
@@ -303,7 +309,7 @@ def startup():
 
     water_deficit = db.get_previous_week_water_deficit()
     print(f"Judging by the past week, you have a total water deficit of {water_deficit} inches.")
-    
+
     water_algo(current_zone, my_sys.water_deficit)
     print("Beep...Bop...Boop...")
     
@@ -454,6 +460,7 @@ db = DBManager()
 db.start_databases()
 
 
+
 my_sys = db.get(SystemConfig, "system")
 zone1 = db.get(ZoneConfig, "zone1")
 zone2 = db.get(ZoneConfig, "zone2")
@@ -463,6 +470,8 @@ zone5 = db.get(ZoneConfig, "zone5")
 zone6 = db.get(ZoneConfig, "zone6")
 
 zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
+
+
 
 if on_raspi:
     raspi_testing()
