@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 from typing import List
 from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.sql.sqltypes import Enum
+from sqlalchemy.sql.sqltypes import Enum, PickleType
 
 import calendar
 
@@ -109,7 +109,9 @@ class ZoneConfig(Base):
     pref_time_hrs = Column(String)
     pref_time_min = Column(String)
     application_rate = Column(Float)
-
+    schedule = Column(PickleType)
+    scheduleString = Column(String)
+    manual_schedule = Column(Boolean)
 
 
 

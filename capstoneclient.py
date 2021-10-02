@@ -28,6 +28,8 @@ from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
 from zone_control import open_all, close_all
 
+from capstoneclient.models import ScheduleEntry, Schedule
+
 DWDBG = False
 
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
@@ -106,55 +108,125 @@ def my_system():
 
 
 # my_schedule() displays basic scheduling data when requested from op_menu()
-def my_schedule():
+def my_schedule(zone: int):
+
+    
+
+    # schedule is zone specific, saved in zone config
+    # schedule can be auto-set or manual - manual ignores all inputs, schedule is auto adjusted
+    
+    # auto schedule adjusts with forecast
+
+    day_dict = {"Mon":0, "Tue":1, "Wed":2, "Thur":3, "Fri":4, "Sat":5, "Sun":6}
+
+    def manual_zone_setup():
+        schedule = Schedule()
+        manual_zone_config = 0
+        i = input("Enter zone number (0 for all), or any other key to exit.")
+        if int(i) not in range(7):
+            return
+        i = input("Enter any desired watering days and times in this format:%nMon 7-7:15, Mon 13-15, Tue 6-7, Wed 14:30-14:45, Thur, Fri, Sat, Sun")
+        
+        mylist = i.split(', ')
+        try:
+            for item in mylist:
+                item_split = item.split(' ')  # split day from times
+                day_num = day_dict.get(item_split[0])  
+                time_list = item_split[1].split('-')
+                start_time = datetime.time(time_list[0])
+                time_list[0] = datetime.timedelta(time_list[0])
+                time_list[1] = datetime.timedelta(time_list[1])
+                duration = time_list[1] - time_list[0]
+                schedule_item = ScheduleEntry(day_num, start_time, duration)
+                schedule.append(schedule_item)
+
+        except Exception as e:
+            print("Cannot parse")
+        
+        if schedule:
+            zone1.schedule = schedule
+            zone1.manual_schedule = True
+            db.add(zone1)
+
+
+
+        
+        
+    zones_enabled = [1]
+    print("Schedule Setup:")
+    print(f"Enabled zones: {zones_enabled}")
+    for zone_num in zones_enabled:
+        print(f"Zone #{zone_num}: AUTO, between 6AM and 6PM")
+    i = input("Press 0 to edit settings for all zones, 1-6 for a specific zone, or any other key to continue.")
+
+    if int(i) not in range(7):
+        return
+    auto_man = input("(A)uto or (M)anual watering control?")
+
+    if auto_man not in ["A", "a", "M", "m"]:
+        return
+    if auto_man in ["A", "a"]:
+        input("Automatic watering control selected. Limited to M-F, 6-10AM and 2-6PM.")
+        return
+    if auto_man in ["M", "m"]:
+        print("Manual watering control selected.")
+        manual_zone_setup()
+    
+
+
+    
+        
+
+
+
     # TECHNICAL DEBT! This code is not hardened against all possible inputs.
-    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    days = []  # init empty array
+    # schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    # days = []  # init empty array
 
-    # dump every ZoneControl task into days array:
-    for tasks in schedule:
-        if tasks.comment == ZONE_CONTROL_COMMENT_NAME:
-            days.append(
-                [str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])]
-            )
+    # # dump every ZoneControl task into days array:
+    # for tasks in schedule:
+    #     if tasks.comment == ZONE_CONTROL_COMMENT_NAME:
+    #         days.append(
+    #             [str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])]
+    #         )
 
-    # parse days array into usable strings:
-    day_string = ""
-    for x in range(len(days)):
-        if days[x][0] == "MON":
-            days[x][0] = "Monday"
-        elif days[x][0] == "TUE":
-            days[x][0] = "Tuesday"
-        elif days[x][0] == "WED":
-            days[x][0] = "Wednesday"
-        elif days[x][0] == "THU":
-            days[x][0] = "Thursday"
-        elif days[x][0] == "FRI":
-            days[x][0] = "Friday"
-        elif days[x][0] == "SAT":
-            days[x][0] = "Saturday"
-        elif days[x][0] == "SUN":
-            days[x][0] = "Sunday"
+    # # parse days array into usable strings:
+    # day_string = ""
+    # for x in range(len(days)):
+    #     if days[x][0] == "MON":
+    #         days[x][0] = "Monday"
+    #     elif days[x][0] == "TUE":
+    #         days[x][0] = "Tuesday"
+    #     elif days[x][0] == "WED":
+    #         days[x][0] = "Wednesday"
+    #     elif days[x][0] == "THU":
+    #         days[x][0] = "Thursday"
+    #     elif days[x][0] == "FRI":
+    #         days[x][0] = "Friday"
+    #     elif days[x][0] == "SAT":
+    #         days[x][0] = "Saturday"
+    #     elif days[x][0] == "SUN":
+    #         days[x][0] = "Sunday"
 
-        if days[x][1] == "0":
-            days[x][1] = "00"
+    #     if days[x][1] == "0":
+    #         days[x][1] = "00"
 
-        if int(days[x][2]) < 12:
-            days[x][1] = days[x][1] + "AM"
-        else:
-            days[x][1] = days[x][1] + "PM"
+    #     if int(days[x][2]) < 12:
+    #         days[x][1] = days[x][1] + "AM"
+    #     else:
+    #         days[x][1] = days[x][1] + "PM"
 
-        if x + 1 == len(days):
-            day_string = day_string + "and " + days[x][0]
-        else:
-            day_string = day_string + days[x][0] + ", "
-    print("Zone 1 is currently scheduled to run on {}.".format(day_string))
-    for x in range(len(days)):
-        print(
-            "On {}, zone 1 will run for {} minutes starting at {}:{}.".format(
-                days[x][0], days[x][3], days[x][2], days[x][1]
-            )
-        )
+    #     if x + 1 == len(days):
+    #         day_string = day_string + "and " + days[x][0]
+    #     else:
+    #         day_string = day_string + days[x][0] + ", "
+    # print("Zone 1 is currently scheduled to run on {}.".format(day_string))
+    # for x in range(len(days)):
+    #     print(
+    #         "On {}, zone 1 will run for {} minutes starting at {}:{}.".format(
+    #             days[x][0], days[x][3], days[x][2], days[x][1]
+    #         )
+    #     )
 
 
 def startup():
