@@ -306,7 +306,7 @@ def raspi_testing():
         try:
             baro_data = read_baro_sensor()
         except Exception as e:
-            devName = "Soil Moist/Temp Sensor"
+            devName = "Baro Sensor"
             print("{0} Read Failed.\t{1}".format(devName, repr(e)))
             import traceback
             errMsg = traceback.format_exc()
