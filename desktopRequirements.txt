@@ -20,3 +20,5 @@ SQLAlchemy~=1.4.23
 AWSIoTPythonSDK~=1.4.9
 requests~=2.25.1
 paho-mqtt~=1.5.1
+
+schedule==1.1.0
