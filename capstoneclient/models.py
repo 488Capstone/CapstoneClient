@@ -82,13 +82,13 @@ class HistoryItem(Base):
         if self.solar is not None:
             #print("solar data was None. Setting to 1 to bypass issue")
             temp_solar = self.solar
-        et_num = 0.408 * delta * (self.solar - G) + psycho * (C_n / (T + 273)) * self.windspeed * (e_s - e_a)
+        et_num = 0.408 * delta * (temp_solar - G) + psycho * (C_n / (T + 273)) * self.windspeed * (e_s - e_a)
         et_den = delta + psycho * (1 + C_d * self.windspeed)
 
         etmm = et_num / et_den  # millimeters per day
         et = etmm / 25.4  # inches per day
         self.etcalc = et
-        self.water_deficit = self.et - self.precip
+        self.water_deficit = et - self.precip
 
     def __repr__(self):
         return f"<HistoryItem date={self.date}, " \
