@@ -6,7 +6,7 @@ import os
 
 import datetime
 
-from models import HistoryItem
+from capstoneclient.models import HistoryItem
 
 
 class DBManager:
