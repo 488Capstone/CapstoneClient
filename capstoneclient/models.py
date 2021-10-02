@@ -67,7 +67,7 @@ class HistoryItem(Base):
          
         rh_decimal = self.rh / 100  # daily average relative humidity as a decimal
         pressure = self.pressure / 10  # database stores hectopascals (hPa), ET calc needs kilopascals (kPa)
-        T = (self.T_max + self.T_min) / 2  # daily mean air temp in Celsius:
+        T = (self.tmax + self.tmin) / 2  # daily mean air temp in Celsius:
         G = 0  # from ASCE, G << R_n so G can be neglected. This can be improved later if desirable.
         e_omean = 0.6108 ** ((17.27 * T) / (T + 237.3))
         e_omin = 0.6108 ** ((17.27 * self.T_min) / (self.T_min + 237.3))
