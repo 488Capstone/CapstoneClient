@@ -13,7 +13,6 @@ from crontab import CronTab
 from capstoneclient.models import SensorEntry, SystemZoneConfig, HistoryItem
 from capstoneclient.db_manager import DBManager
 
-from capstoneclient.sensors import read_baro_sensor, read_soil_sensor, read_adc
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
 LOG_FILE_NAME = './client_dev.log'
@@ -24,7 +23,7 @@ def isOnRaspi ():
 on_raspi = isOnRaspi()
 if on_raspi:
     # this try/except lets code function outside of raspberry pi for development.
-    pass
+    from capstoneclient.sensors import read_baro_sensor, read_soil_sensor, read_adc
 
 
 else:

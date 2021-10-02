@@ -15,9 +15,7 @@ from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAM
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import SystemZoneConfig
 
-from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
-from zone_control import open_all, close_all
 
 DWDBG = False
 
@@ -27,8 +25,11 @@ on_raspi = isOnRaspi()
 if on_raspi:
     # this try/except lets code function outside of raspberry pi for development.
     try:
+        print("Importing raspi Python libs")
         # todo: import error on RPi => adding from capstoneclient to import below
         from capstoneclient.raspispecific import *
+        from zone_control import open_all, close_all
+        from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
     except Exception as e:
         on_raspi = False
         DWDBG = True
@@ -343,12 +344,16 @@ my_sys = db.get(SystemZoneConfig, "system")
 
 zone1 = db.get(SystemZoneConfig, "zone1")
 
-if on_raspi:
-    raspi_testing()
+
 
 if my_sys.setup_complete:
     print("---Not first startup---\n")
-    op_menu()
+    #TODO DW 2021-10-01-21:24 we need to merge the op_menu() and raspi testing() into one menu
+    #       who's choices change or somehow handle being on a Desktop vs. being on the raspi
+    if on_raspi:
+        raspi_testing()
+    else:
+        op_menu()
 else:
     print("First startup! Welcome.")
     startup()
