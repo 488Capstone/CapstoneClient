@@ -15,7 +15,12 @@ from capstoneclient.db_manager import DBManager
 
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
+STARTUP_COMMENT_NAME = 'SIO-StartUp'
 LOG_FILE_NAME = './client_dev.log'
+
+# Debug mode variable used to enable additional print statements 
+DWDBG = False 
+# DWDBG = True
 
 def isOnRaspi ():
     return os.path.exists("/sys/firmware/devicetree/base/model")
@@ -24,16 +29,9 @@ on_raspi = isOnRaspi()
 if on_raspi:
     # this try/except lets code function outside of raspberry pi for development.
     from capstoneclient.sensors import read_baro_sensor, read_soil_sensor, read_adc
-
-
 else:
     DWDBG = True
 
-# Debug mode variable used to enable additional print statements 
-DWDBG = False 
-# DWDBG = True
-#DWDBG = 10 # set DWDBG to a number to change the amount of print statements! scale of 0-10, 10 being the most 
-# 1 means print statements that print maybe 1-2 lines. If the number is higher, expect more prints 
 ################################################################################ 
 # The below function is a convenience function used during debug to test the  
 # values of expressions/variables periodically throughout the code. When DWDBG 
@@ -364,6 +362,21 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     else:
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
+def create_cron_job(cmdstr, schedstr, commentText):
+    clientDir = os.getenv('SIOclientDir')
+    if clientDir is not None:
+        schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+        schedule.remove_all(comment=commentText)
+        #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
+        prescriptCmd = "cd {}; ".format(clientDir)
+        command_string = "{} {} " .format(prescriptCmd, cmdstr)  
+        task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
+        task.setall(schedstr) 
+        schedule.write()  # finalizes the task in the crontab
+    else:
+        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
+
+
 # DW function used as an internal wrapper around code that is the same between two branches of the read_adc_for function
 def read_adc_for_internal (select, arglist, verbose=True):
     addr = arglist[0]
@@ -497,6 +510,18 @@ if __name__ == "__main__":
         #TODO really should make this loop through all available zones, and for prototype it'll only be 1 
         water_algo(zone1)
 
+    elif choice == "STARTUP":
+        if on_raspi:
+            from capstoneclient.gpio_control import *
+            raspi_startup()
+    elif choice == "SET_STARTUP_CRON":
+        #print("{}---DEV: test ".format(str(datetime.now())))
+        if on_raspi:
+            # this try/except lets code function outside of raspberry pi for development.
+            create_cron_job(' ./runPy.sh ./dailyactions.py STARTUP', '@reboot', STARTUP_COMMENT_NAME)
+            #TODO add web gui to the @reboot crontab
+            #print("DW - need to add webgui boot up to the cron job when possible")
+
     elif choice == "DEV":
         print("{}---DEV: test ".format(str(datetime.now())))
     elif choice == "DEV_SOIL":
@@ -524,3 +549,5 @@ if __name__ == "__main__":
 #                timenow = str(datetime.now())
 #                print(f"{timenow}---ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
 #
+    else:
+        print("{}---INPUT PARAM CHOICE NOT RECOGNIZED: '{choice}'".format(str(datetime.now())))
