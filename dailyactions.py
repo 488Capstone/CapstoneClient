@@ -575,6 +575,11 @@ if __name__ == "__main__":
 #                val, volt = read_adc(addr, pin)
 #                timenow = str(datetime.now())
 #                print(f"{timenow}---ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
-#
+    elif choice == "DEV_VO":
+        import zone_control 
+        zone_control.open_valve(1)
+    elif choice == "DEV_VC":
+        import zone_control 
+        zone_control.close_valve(1)
     else:
         print("{}---INPUT PARAM CHOICE NOT RECOGNIZED: '{choice}'".format(str(datetime.now())))
