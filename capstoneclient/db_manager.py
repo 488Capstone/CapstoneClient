@@ -19,6 +19,7 @@ class DBManager:
             self.engine = create_engine(dbFileName, echo=False, future=True)
             self.my_session = Session(self.engine)
             # self.Session = sessionmaker(self.engine)
+            self.start_databases()
         else:
             print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
@@ -34,28 +35,33 @@ class DBManager:
 
     def add(self, obj):
         """ Adds an object to the correct table - defined by model."""
-
         self.my_session.add(obj)
         self.my_session.commit()
-
+    
+    def commit(self):
+        self.my_session.commit
 
     def get(self, classname, key):
         """ Gets an object from the correct table - defined by model."""
-        # with self.Session() as session:
-        #     return session.get(classname, key)
         return self.my_session.get(classname, key)
 
     def setup_system(self):
+        """Creates system and zones in db"""
         new_system = SystemConfig(id="system", setup_complete=False)
+        new_system.zones_enabled = [1]
         self.add(new_system)
-        # todo: num_zones to system db
-        num_zones = 1
-        for r in range(1):
-            new_zone = ZoneConfig(id="zone"+str(r+1))
-            self.add(new_zone)
+        num_zones = 6
+        for r in range(num_zones):
+            zone_id = "zone"+str(r+1)
+            if not self.get(ZoneConfig, id = zone_id):
+                new_zone = ZoneConfig(id = zone_id)
+                new_zone.is_manual_mode = False
+                self.add(new_zone)
+        self.my_session.commit()
+        
     
     def get_previous_week_water_deficit(self):
-        one_week_ago_dt = datetime.datetime.now() - datetime.timedelta(days = 7)
+        one_week_ago_dt = datetime.date.today() - datetime.timedelta(days = 7)
         one_week_ago_date = one_week_ago_dt.date()
         result = self.my_session.query(HistoryItem).filter(HistoryItem.date >= one_week_ago_date)
         w_d = 0
@@ -64,7 +70,27 @@ class DBManager:
             w_d += row.water_deficit
         print(f"last week water deficit is {w_d}")
         return w_d
+    
+    def get_solar_for_date(self, date: datetime.date) -> float:
+        result = self.my_session.query(HistoryItem).filter(HistoryItem.date == date)
+        # result = self.get(HistoryItem, date)
+        return result.solar
 
+    def apply_solar_to_dates(self, tuple_list):
+        for tup in tuple_list:
+            item = self.my_session.query(HistoryItem).filter(HistoryItem.date == tup[0])
+            item.solar = tup[1]
+        self.my_session.commit()
+
+    my_sys = get(SystemConfig, "system")
+    zone1 = get(ZoneConfig, "zone1")
+    zone2 = get(ZoneConfig, "zone2")
+    zone3 = get(ZoneConfig, "zone3")
+    zone4 = get(ZoneConfig, "zone4")
+    zone5 = get(ZoneConfig, "zone5")
+    zone6 = get(ZoneConfig, "zone6")
+
+    zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
 
 # use/test:
 # from datetime import datetime

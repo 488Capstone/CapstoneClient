@@ -5,31 +5,23 @@
 #####################################################################
 
 import os
-from re import match
+from re import re
 import sys
+from datetime import datetime, timedelta
+
 import requests
-import re
-
 from crontab import CronTab
-
-# from cron_descriptor import get_description
-import datetime
+from sqlalchemy.sql.expression import null
 from dailyactions import (
-    gethistoricaldata,
-    water_algo,
     ZONE_CONTROL_COMMENT_NAME,
     LOG_FILE_NAME,
     isOnRaspi,
+    correct_missing_history_items
 )
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import HistoryItem, SystemConfig, ZoneConfig, ScheduleEntry, Schedule
-
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
-
 from zone_control import open_all, close_all
-
-
-
 
 DWDBG = False
 
@@ -56,7 +48,6 @@ if on_raspi:
 else:
     DWDBG = True
     input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
-
 
 # op_menu() is the landing spot for operations.
 def op_menu():
@@ -94,27 +85,27 @@ def op_menu():
         print("Try again, turd")
     op_menu()
 
-
 # my_system() displays basic system/zone data when requested from op_menu()
-# todo: these not returning config just set up
+# TODO: these not returning config just set up
 def my_system():
 
     print("System Data:")
     print(f"Location: {my_sys.city}, {my_sys.state}, {my_sys.zipcode}")
     print(f"Enabled zones: {my_sys.zones_enabled}.")
-    # todo sensors shown here
-    print(
-        f"Zone 1 soil is primarily {zone1.soil_type}. "
-        f"Application rate is {zone1.application_rate} inches per hour."
-    )
-    
-    input("Press any key to continue.")
+    # TODO: sensors shown here
 
+    for zone_num in my_sys.zones_enabled:
+        zone = zone_list[zone_num - 1]
+        print(
+            f"Zone{zone_num} soil is primarily {zone.soil_type}. "
+            f"Application rate is {zone.application_rate} inches per hour."
+            f"Manual mode = {zone.is_manual_mode}"
+        )
+    input("Press any key to continue.")
 
 def my_schedule():
     # schedule is zone specific, saved in zone config
-    # schedule can be auto-set or manual - manual ignores all inputs, schedule is auto adjusted
-    
+    # schedule can be auto-set or manual - manual ignores all remote data, schedule is auto adjusted
     # auto schedule adjusts with forecast
 
     day_dict = {"Mon":0, "Tue":1, "Wed":2, "Thur":3, "Fri":4, "Sat":5, "Sun":6}
@@ -155,44 +146,59 @@ def my_schedule():
             print("Cannot parse: {e}")
         
         if schedule:
-            zone1.schedule = schedule
-            zone1.is_manual_mode = True
-            db.add(zone1)
+            if zone_num != 0:
+                zone = zone_list[zone_num]
+                zone.manual_schedule = schedule
+                zone.is_manual_mode = True
+            else:
+                for zone_num in my_sys.zones_enabled:
+                    zone = zone_list[zone_num - 1]
+                    zone.manual_schedule = schedule
+                    zone.is_manual_mode = True
+            db.commit()
      
     print("Schedule Setup:")
     print(f"Enabled zones: {my_sys.zones_enabled}")
 
+    # print schedule items for each enabled zone:
     for zone_num in my_sys.zones_enabled:
-        if zone1.is_manual_mode:
+        zone = zone_list[zone_num - 1]
+        if zone.is_manual_mode:
             print(f"Zone #{zone_num}: MANUAL at these times:")
+            for item in zone.manual_schedule:
+                print(item)
         else:
             print(f"Zone #{zone_num}: AUTO, at these times:")
-
-        for item in zone1.schedule:
-            print(item)
-
+            for item in zone.schedule:
+                print(item)
         
-    i = input("Press 0 to edit settings for all zones, 1-6 for a specific zone, or any other key to continue.")
-
-    if int(i) not in range(7):
+    i = input("Press 0 to edit schedule settings for all enabled zones, 1-6 for a specific zone, or any other key to continue.")
+    i = int(i)
+    if i not in range(7):
         return
+    
     auto_man = input("(A)uto or (M)anual watering control?")
-
     if auto_man not in ["A", "a", "M", "m"]:
         return
     if auto_man in ["A", "a"]:
-        input("Automatic watering control selected. Limited to M-F, 6-10AM and 2-6PM.")
-        return
+        input("Automatic watering control selected. Based on weather, sensors, etc. Limited to M-F, 6-10AM and 2-6PM.")
+
+        if i != 0:
+            z = zone_list[i-1]
+            z.is_manual_mode = False
+        else:
+            for zone_num in my_sys.zones_enabled:
+                z = zone_list[i-1]
+                z.is_manual_mode = False
+
     if auto_man in ["M", "m"]:
         print("Manual watering control selected.")
-        manual_zone_setup(int(i))
-
+        manual_zone_setup(i)
 
 def startup():
-
-    my_sys.zones_enabled = [1]
-
     print("Excellent choice, sir. Startup protocol initiated.")
+    
+    my_sys.zones_enabled = [1] # default single zone
 
     i = input("Enabled Zones: Zone1 is enabled by default. Change? [Y]es, or any other key to continue")
     matches = False
@@ -210,14 +216,11 @@ def startup():
                         new_enabled_zones.append(x+1)
                 my_sys.zones_enabled = new_enabled_zones
                     
-
-
     # Get location data from IP address:
-    loc = requests.get(
-        "http://ipapi.co/json/?key=H02y7T8oxOo7CwMHhxvGDOP7JJqXArMPjdvMQ6XhA6X4aR4Tub"
-    ).json()
+    loc = requests.get("http://ipapi.co/json/?key=H02y7T8oxOo7CwMHhxvGDOP7JJqXArMPjdvMQ6XhA6X4aR4Tub").json()
 
     # enter location into system database:
+    # TODO: zip not always 5 digits
     my_sys.city, my_sys.state, my_sys.zipcode, my_sys.lat, my_sys.long = (
         loc["city"],
         loc["region_code"],
@@ -225,8 +228,7 @@ def startup():
         loc["latitude"],
         loc["longitude"],
     )
-
-    db.add(my_sys)  # add/update object
+    db.commit() # commit in case next part doesnt work
 
     print(f"We think you're in {my_sys.city}, {my_sys.state} {my_sys.zipcode}")
     print(f"Lat/long: {my_sys.lat}, {my_sys.long}")
@@ -234,32 +236,17 @@ def startup():
 
     # get historical weather / solar data, build database.
     # This does the past week as a starting point for a water deficit.
-
-    # todo: instead of 1 week data, look for missing days in db and get data for those days
-
-    history_items_list = gethistoricaldata(
-        days=7, latitude=my_sys.lat, longitude=my_sys.long
-    )
-    for item in history_items_list:
-        try:
-            db.my_session.add(item)
-        except Exception as e:
-            print("capstoneclient startup(): cant add history item to db (probably already there)")
-        db.my_session.commit()
+    correct_missing_history_items()
         
-
     print("Database of historical environmental data built.")
 
     # build system info:
     print("Set up each of the enabled zones")
 
-    for i in range(len(my_sys.zones_enabled)):
-        current_zone = zone_list[my_sys.zones_enabled[i]-1]
-        print("ZONE"+" "+str(i+1))
-        soil_type = input(
-            str()+"What is the predominant soil type in this zone? [limit answers to 'sandy' or "
-            "'loamy']"
-        )
+    for i in my_sys.zones_enabled:
+        current_zone = zone_list[i-1]
+        print("ZONE"+" "+str(i))
+        soil_type = input("What is the predominant soil type in this zone? [limit answers to 'sandy' or 'loamy']")
         while soil_type != ("sandy" or "loamy"):
             soil_type = input(
                 "Sorry, we didn't quite catch that...is the predominant soil type in this zone sandy or "
@@ -268,55 +255,33 @@ def startup():
 
         current_zone.soil_type = soil_type
 
-        # TECHNICAL DEBT! improve user selection of watering days and times.
+        # TODO: TECHNICAL DEBT! improve user selection of watering days and times.
         if soil_type == "sandy":
-            print(
-                "Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy."
-            )
+            print("Sandy soil doesn't hold water well; more frequent waterings are best to keep your plants healthy.")
             print("Three days a week should do nicely. Lets say Mon-Weds-Fri for now.")
 
-            (
-                zone1.waterSun,
-                zone1.waterMon,
-                zone1.waterTue,
-                zone1.waterWed,
-                zone1.waterThu,
-                zone1.waterFri,
-                zone1.waterSat,
-            ) = (0, 1, 0, 1, 0, 1, 0)
-
         elif soil_type == "loamy":
-            print(
-                "Your loamy soil will hold water well. We recommend picking one watering day a week."
-            )
+            print("Your loamy soil will hold water well. We recommend picking one watering day a week.")
             print("We'll make it easy and pick Wednesday for now.")
-            (
-                current_zone.waterSun,
-                current_zone.waterMon,
-                current_zone.waterTue,
-                current_zone.waterWed,
-                current_zone.waterThu,
-                current_zone.waterFri,
-                current_zone.waterSat,
-            ) = (0, 0, 0, 1, 0, 0, 0)
-
-        # TECHNICAL DEBT! Prototype doesn't allow changing the time of day for watering.
+        # TODO: look into these
         current_zone.application_rate = 1.5
-        current_zone.pref_time_hrs = "09"
-        current_zone.pref_time_min = "00"
-        db.add(current_zone)  # add/update object
+        current_zone.emmitter_efficiency = 0.7
+        # current_zone.pref_time_hrs = "09"
+        # current_zone.pref_time_min = "00"
+        db.commit()
 
-        print(
-            "Okay, it looks like we have everything we need to calculate your water needs. We'll do that now."
-        )  
+        print("Okay, it looks like we have everything we need to calculate your water needs. We'll do that now.")  
 
-    # TECHNICAL DEBT - how much did you water your lawn over the past week?
-
-    water_deficit = db.get_previous_week_water_deficit()
-    print(f"Judging by the past week, you have a total water deficit of {water_deficit} inches.")
-
-    water_algo(current_zone, water_deficit)
-    print("Beep...Bop...Boop...")
+        # TECHNICAL DEBT - how much did you water your lawn over the past week?
+        # TODO: this duplicated in dailyactions
+        rolling_water_deficit = db.get_previous_week_water_deficit()
+        print(f"Judging by the past week, you have a total water deficit of {rolling_water_deficit} inches.")
+        
+        # update auto schedule for each zone based on new daily data
+        for zone_num in my_sys.zones_enabled:
+            current_zone = zone_list[zone_num - 1]
+            current_zone.water_algo(rolling_water_deficit)
+        print("Beep...Bop...Boop...")
     
 
     print("Creating recurring tasks...")
@@ -324,7 +289,7 @@ def startup():
 
     print("Setup complete. Redirecting to main menu.")
     my_sys.setup_complete = True
-    db.add(my_sys)
+    db.commit()
     op_menu()
 
 
@@ -395,21 +360,24 @@ def task_scheduler():
 
 
 def application_rate_cal():
-    print(
-        "Lets get calibrating! We'll only do zone 1 today (since I'm only a prototype and all)."
-    )
+    print("Lets get calibrating!")
+    zone_num = null
+    while zone_num not in range(1,7):
+        zone_num = input("Update application rate: Which zone? Enter 1 through 6")
+        print("Enter integer 1 through 6 to continue")
+    
     print("Here are the instructions for calibration.")
     print("...")  # Insert instructions here
     print("...")  # Insert instructions here
     print("...")  # Insert instructions here
+    # TODO offramp
     new_application_rate = input(
         "Now, enter your new application rate in inches per hour (as an integer or decimal value): "
     )
 
-    # look to db for a zone 1 config, if none add it, if there update it
-    zone_1 = db.get(ZoneConfig, "zone1")
-    zone_1.application_rate = new_application_rate
-    db.add(zone1)  # add/update object
+    zone = zone_list[zone_num - 1]
+    zone.application_rate = new_application_rate
+    db.commit()
 
 
 def raspi_testing():
@@ -462,21 +430,19 @@ def raspi_testing():
 #                                            #
 ##############################################
 db = DBManager()
-db.start_databases()
+zone_list = db.zone_list
+my_sys = db.my_sys
+# db.start_databases()
 
+# my_sys = db.get(SystemConfig, "system")
+# zone1 = db.get(ZoneConfig, "zone1")
+# zone2 = db.get(ZoneConfig, "zone2")
+# zone3 = db.get(ZoneConfig, "zone3")
+# zone4 = db.get(ZoneConfig, "zone4")
+# zone5 = db.get(ZoneConfig, "zone5")
+# zone6 = db.get(ZoneConfig, "zone6")
 
-
-my_sys = db.get(SystemConfig, "system")
-zone1 = db.get(ZoneConfig, "zone1")
-zone2 = db.get(ZoneConfig, "zone2")
-zone3 = db.get(ZoneConfig, "zone3")
-zone4 = db.get(ZoneConfig, "zone4")
-zone5 = db.get(ZoneConfig, "zone5")
-zone6 = db.get(ZoneConfig, "zone6")
-
-zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
-
-
+# zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
 
 if on_raspi:
     raspi_testing()
