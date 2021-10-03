@@ -4,9 +4,9 @@ from typing import List
 
 from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.sql.expression import null
-from sqlalchemy.sql.sqltypes import Enum, PickleType
+from sqlalchemy.sql.sqltypes import PickleType
 
+from capstoneclient.weather import WeatherDayItem
 
 Base = declarative_base()
 
@@ -59,8 +59,7 @@ class HistoryItem(Base):
     etcalc = Column(Float)
     water_deficit = Column(Float)
 
-
-    def calculate_et_and_water_deficit(self) -> null: 
+    def calculate_et_and_water_deficit(self) -> None: 
         """Call to generate and populate calculated values for History Item"""
         # todo: check these have reasonable values    
         # stretch: account for longwave solar radiation
@@ -89,6 +88,15 @@ class HistoryItem(Base):
         et = etmm / 25.4  # inches per day
         self.etcalc = et
         self.water_deficit = et - self.precip
+
+    def populate_from_weather_item(self, item: WeatherDayItem):
+        self.date = item.date
+        self.windspeed = item.windspeed
+        self.tmax = item.temp_max
+        self.tmin = item.temp_min
+        self.rh = item.humidity
+        self.pressure = item.pressure
+        self.precip = item.precip
 
     def __repr__(self):
         return f"<HistoryItem date={self.date}, " \
@@ -140,10 +148,47 @@ class ZoneConfig(Base):
     pref_time_hrs = Column(String)
     pref_time_min = Column(String)
     application_rate = Column(Float)
+    emitter_efficiency = Column(Float)
     schedule = Column(PickleType)
     manual_schedule = Column(PickleType)
     scheduleString = Column(String)
     is_manual_mode = Column(Boolean)
+
+    # water_algo() develops the desired watering tasks and passes it to water_scheduler() to be executed with CronTab
+    def water_algo(self, water_deficit: float) -> None:
+        
+        if self.soil_type == "sandy":
+            watering_days = [0, 2, 4] #MWF
+        else:
+            watering_days = [2] #W
+        
+        # auto default twice a day
+        num_weekly_applications = len(watering_days) * 2
+
+        # TODO: TECHNICAL DEBT! Prototype only accounts for rotary sprinklers
+        # emitterefficiency = {"rotary": 0.7}
+        # TODO: this deficit only from weekly history, not daily update
+        effectiveapplicationrate = self.application_rate * self.emitter_efficiency
+        req_watering_time = (water_deficit / effectiveapplicationrate) * 60  # total number of minutes needed
+        watering_duration = int(req_watering_time / num_weekly_applications)  # number of minutes per watering session
+        
+        if watering_duration > 5:
+        
+            # default 2 waterings per weekday Limited to M-F, 6-10AM and 2-6PM. Default 8am, 3pm
+            new_auto_schedule = Schedule()
+            
+            for day in watering_days:
+                start_time_morning = datetime.time(8)
+                start_time_afternoon = datetime.time(15)
+                new_schedule_entry = ScheduleEntry(day, start_time_morning, watering_duration)
+                new_auto_schedule.append(new_schedule_entry)
+                new_schedule_entry = ScheduleEntry(day, start_time_afternoon, watering_duration)
+                new_auto_schedule.append(new_schedule_entry)
+
+            self.schedule = new_auto_schedule
+        
+
+        
 
 
 class ScheduleEntry():
