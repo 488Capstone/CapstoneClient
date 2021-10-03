@@ -19,7 +19,7 @@ zone_lookup = (
 POLARITY = RASPI_PIN["polarity"]
 
 def pulse_zone(zonepin):
-    ENABLE_TIME = 40e-3 # seconds
+    ENABLE_TIME = 40e-3 # seconds, needs to be fast, otherwise we just dump current like crazy
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
     GPIO.output(zonepin, GPIO.HIGH)
@@ -39,7 +39,7 @@ def set_valve(zn, open_bool):
     print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) ON")
 
 def open_valve(zn: int):
-    set_valve(zn, True):
+    set_valve(zn, True)
 
 
 def open_all():
