@@ -9,7 +9,7 @@ RASPI_PIN = {
     "valve6_enable":25,
     "polarity":5,
     "shutdown":6,
-    "ps_shutdown":13,
+    "ps_shutoff":13,
     "stat1":27,
     "stat2":22,
         }
