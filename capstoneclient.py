@@ -431,7 +431,7 @@ def raspi_testing():
 ##############################################
 db = DBManager()
 db.start_databases
-zone_list = db.zone_list
+
 my_sys = db.my_sys
 # db.start_databases()
 

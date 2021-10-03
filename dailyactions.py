@@ -156,13 +156,13 @@ else:
 ##############################################
 #DW 2021-09-18-16:28 need to add this in so 'import' doesnt run this code
 #   We only want this code running when the script is called standalone.
-db = DBManager()
-db.start_databases()
-zone_list = db.zone_list
-my_sys = db.my_sys
+
 
 if __name__ == "__main__":
-
+    db = DBManager()
+    db.start_databases()
+    
+    my_sys = db.my_sys
     
     # db.start_databases()
 
