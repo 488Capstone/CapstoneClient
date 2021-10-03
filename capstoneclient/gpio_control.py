@@ -2,7 +2,7 @@
 # at this point it's particularly meant to handle the gpio states at raspi initial power up
 import time
 import RPi.GPIO as GPIO
-from capstoneclient.raspi_pins import RASPI_PIN_NAMES, RASPI_PIN_NUMS, RASPI_PIN
+from capstoneclient.raspi_pins import RASPI_PIN
 
 def state_str(boolval):
     if boolval: return "HI"
@@ -23,8 +23,13 @@ def raspi_startup():
             "valve5_enable":False,
             "valve6_enable":False
             }
-    prior_pinmode = GPIO.getmode()
-    GPIO.setmode(GPIO.BOARD)
+    #DW 2021-10-03-13:29 turns out there's no reason to store the old mode
+    # the gpio code ONLY allows one mode...
+    #prior_pinmode = GPIO.getmode()
+
+    #DW 2021-10-03-13:30 is there any point to setting this since something
+    # is already doing it in our imports? who knows... let's just keep just incase
+    GPIO.setmode(GPIO.BCM)
     outputpin_names = pinstate.keys()
     for key in outputpin_names:
         value = pinstate[key]
@@ -32,10 +37,11 @@ def raspi_startup():
         pinnum = RASPI_PIN[key]
         GPIO.setup(pinnum, GPIO.OUT, initial=state_gpio(value))
     #TODO DW 2021-10-03-12:20 should we apply some default pull ups/downs to the inputs?
-    for key in RASPI_PIN_NAMES:
+    for key in RASPI_PIN.keys():
         if key not in outputpin_names:
             print(f"INPUT {key}")
             pinnum = RASPI_PIN[key]
             GPIO.setup(pinnum, GPIO.IN)
 
-    GPIO.setmode(prior_pinmode)
+    #DW 2021-10-03-13:30 no longer needed
+    #GPIO.setmode(prior_pinmode)

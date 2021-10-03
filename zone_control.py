@@ -5,7 +5,7 @@ import RPi.GPIO as GPIO
 from datetime import datetime, timedelta
 import sys
 import schedule
-from capstoneclient.raspi_pins import RASPI_PIN_NAMES, RASPI_PIN_NUMS, RASPI_PIN
+from capstoneclient.raspi_pins import RASPI_PIN
 
 # zone 1: GPIO19, zone 2: GPIO26, zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
 zone_lookup = (
