@@ -13,14 +13,14 @@ def state_gpio(boolval):
 
 def raspi_startup():
     pinstate = {
-            "polarity":False
-            "shutdown":False
-            "ps_shutoff":False
-            "valve1_enable":False
-            "valve2_enable":False
-            "valve3_enable":False
-            "valve4_enable":False
-            "valve5_enable":False
+            "polarity":False,
+            "shutdown":False,
+            "ps_shutoff":False,
+            "valve1_enable":False,
+            "valve2_enable":False,
+            "valve3_enable":False,
+            "valve4_enable":False,
+            "valve5_enable":False,
             "valve6_enable":False
             }
     prior_pinmode = GPIO.getmode()
