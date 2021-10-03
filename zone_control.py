@@ -30,9 +30,9 @@ def pulse_zone(zonepin):
 def set_valve(zn, open_bool):
     channel = zone_lookup[zn-1]
     if open_bool:
-        GPIO.outpu(POLARITY, GPIO.HIGH)
+        GPIO.output(POLARITY, GPIO.HIGH)
     else:
-        GPIO.outpu(POLARITY, GPIO.LOW)
+        GPIO.output(POLARITY, GPIO.LOW)
 
     pulse_zone(channel)
     now_time = datetime.now()
