@@ -430,19 +430,20 @@ def raspi_testing():
 #                                            #
 ##############################################
 db = DBManager()
+db.start_databases
 zone_list = db.zone_list
 my_sys = db.my_sys
 # db.start_databases()
 
-# my_sys = db.get(SystemConfig, "system")
-# zone1 = db.get(ZoneConfig, "zone1")
-# zone2 = db.get(ZoneConfig, "zone2")
-# zone3 = db.get(ZoneConfig, "zone3")
-# zone4 = db.get(ZoneConfig, "zone4")
-# zone5 = db.get(ZoneConfig, "zone5")
-# zone6 = db.get(ZoneConfig, "zone6")
+my_sys = db.get(SystemConfig, "system")
+zone1 = db.get(ZoneConfig, "zone1")
+zone2 = db.get(ZoneConfig, "zone2")
+zone3 = db.get(ZoneConfig, "zone3")
+zone4 = db.get(ZoneConfig, "zone4")
+zone5 = db.get(ZoneConfig, "zone5")
+zone6 = db.get(ZoneConfig, "zone6")
 
-# zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
+zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
 
 if on_raspi:
     raspi_testing()

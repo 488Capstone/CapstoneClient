@@ -21,33 +21,33 @@ class DBManager:
             self.engine = create_engine(dbFileName, echo=False, future=True)
             self.my_session = Session(self.engine)
             # self.Session = sessionmaker(self.engine)
-            self.start_databases()
+            # self.start_databases()
         else:
             print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
-    @property
-    def my_sys(self): 
-        return self.get(SystemConfig, "system")
-    @property
-    def zone1(self): 
-        return self.get(ZoneConfig, "zone1")
-    @property  
-    def zone2(self): 
-        return self.get(ZoneConfig, "zone2")
-    @property
-    def zone3(self): 
-        return self.get(ZoneConfig, "zone3")
-    @property
-    def zone4(self): 
-        return self.get(ZoneConfig, "zone4")
-    @property
-    def zone5(self): 
-        return self.get(ZoneConfig, "zone5")
-    @property
-    def zone6(self): 
-        return self.get(ZoneConfig, "zone6")
-    @property
-    def zone_list(self): 
-        return [self.zone1, self.zone2, self.zone3, self.zone4, self.zone5, self.zone6]
+    # @property
+    # def my_sys(self): 
+    #     return self.get(SystemConfig, "system")
+    # @property
+    # def zone1(self): 
+    #     return self.get(ZoneConfig, "zone1")
+    # @property  
+    # def zone2(self): 
+    #     return self.get(ZoneConfig, "zone2")
+    # @property
+    # def zone3(self): 
+    #     return self.get(ZoneConfig, "zone3")
+    # @property
+    # def zone4(self): 
+    #     return self.get(ZoneConfig, "zone4")
+    # @property
+    # def zone5(self): 
+    #     return self.get(ZoneConfig, "zone5")
+    # @property
+    # def zone6(self): 
+    #     return self.get(ZoneConfig, "zone6")
+    # @property
+    # def zone_list(self): 
+    #     return [self.zone1, self.zone2, self.zone3, self.zone4, self.zone5, self.zone6]
     
     
     

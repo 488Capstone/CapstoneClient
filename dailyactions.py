@@ -98,14 +98,14 @@ def read_sensors():
     db.add(sample)
 
 def daily_update():
-    # my_sys = db.get(SystemConfig, "system")
-    # zone1 = db.get(ZoneConfig, "zone1")
-    # zone2 = db.get(ZoneConfig, "zone2")
-    # zone3 = db.get(ZoneConfig, "zone3")
-    # zone4 = db.get(ZoneConfig, "zone4")
-    # zone5 = db.get(ZoneConfig, "zone5")
-    # zone6 = db.get(ZoneConfig, "zone6")
-    # zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
+    my_sys = db.get(SystemConfig, "system")
+    zone1 = db.get(ZoneConfig, "zone1")
+    zone2 = db.get(ZoneConfig, "zone2")
+    zone3 = db.get(ZoneConfig, "zone3")
+    zone4 = db.get(ZoneConfig, "zone4")
+    zone5 = db.get(ZoneConfig, "zone5")
+    zone6 = db.get(ZoneConfig, "zone6")
+    zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
 
     num_corrections = correct_missing_history_items()
     if num_corrections > 0:
@@ -157,6 +157,7 @@ else:
 #DW 2021-09-18-16:28 need to add this in so 'import' doesnt run this code
 #   We only want this code running when the script is called standalone.
 db = DBManager()
+db.start_databases()
 zone_list = db.zone_list
 my_sys = db.my_sys
 
