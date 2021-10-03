@@ -123,4 +123,4 @@ if test_mode:
         schedule.run_pending()
     cleanup()  # cleanup turns everything to input
 
- sys.exit()
+#sys.exit()
