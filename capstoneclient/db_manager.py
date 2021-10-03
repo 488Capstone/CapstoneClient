@@ -10,21 +10,20 @@ from capstoneclient.models import HistoryItem
 
 
 class DBManager:
-    _instance = None
 
 
 
-    # def __init__(self):
-    #     clientDir = os.getenv('SIOclientDir')
-    #     if clientDir is not None:
-    #         dbFileName = "sqlite+pysqlite:///{}/my_data".format(clientDir)
-    #         #print("Creating database at path: " + dbFileName)
-    #         self.engine = create_engine(dbFileName, echo=False, future=True)
-    #         self.my_session = Session(self.engine)
-    #         # self.Session = sessionmaker(self.engine)
-    #         self.start_databases()
-    #     else:
-    #         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
+    def __init__(self):
+        clientDir = os.getenv('SIOclientDir')
+        if clientDir is not None:
+            dbFileName = "sqlite+pysqlite:///{}/my_data".format(clientDir)
+            #print("Creating database at path: " + dbFileName)
+            self.engine = create_engine(dbFileName, echo=False, future=True)
+            self.my_session = Session(self.engine)
+            # self.Session = sessionmaker(self.engine)
+            self.start_databases()
+        else:
+            print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
     @property
     def my_sys(self): 
         return self.get(SystemConfig, "system")
@@ -50,22 +49,7 @@ class DBManager:
     def zone_list(self): 
         return [self.zone1, self.zone2, self.zone3, self.zone4, self.zone5, self.zone6]
     
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(DBManager, cls).__new__(cls)
-
-            clientDir = os.getenv('SIOclientDir')
-            if clientDir is not None:
-                dbFileName = "sqlite+pysqlite:///{}/my_data".format(clientDir)
-                #print("Creating database at path: " + dbFileName)
-                engine = create_engine(dbFileName, echo=False, future=True)
-                my_session = Session(engine)
-                # self.Session = sessionmaker(self.engine)
-                # cls._instance.start_databases()
-            else:
-                print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
-
-            return cls._instance
+    
     
     
     def start_databases(self):
