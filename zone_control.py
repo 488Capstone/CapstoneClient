@@ -83,7 +83,6 @@ def open_valve_for(zn: int, dur):
 def cleanup():
     GPIO.cleanup()
 
-if __name__ == "__main__":
 
 test_mode = False
 
@@ -91,37 +90,37 @@ test_mode = False
 # todo take list of zones, durations via CLI
 # for direct call to this file:
 # CLI: > ./zone_control.py ['zone1'] [duration]
-#if __name__ == "__main__" and not test_mode:
-#    zone = int(sys.argv[1][-1])  # last char is id => check 0 to 6, 0 operates all zones
-#    duration = int(sys.argv[2])  # number of minutes => check 0 to 300
-#    on_off = sys.argv[3]
-#
-#    if zone in range(7) and duration in range(301):
-#
-#        if zone == 0:
-#            if on_off == 'on':
-#                open_all()
-#            if on_off == 'off':
-#                close_all()
-#
-#        elif on_off == 'on' and duration == 0:
-#            open_valve(zone)
-#
-#        elif on_off == 'off':
-#            close_valve(zone)
-#
-#        else:
-#            open_valve_for(zone, duration)
-#            while schedule.get_jobs():
-#                schedule.run_pending()
-#
-#    else:
-#        print(f"bad zone/duration values: zone={zone}, duration={duration}, on_off={on_off}")
-#
-#if test_mode:
-#    open_valve_for(1, 0.1)
-#    while schedule.get_jobs():
-#        schedule.run_pending()
-#    cleanup()  # cleanup turns everything to input
-#
-# sys.exit()
+if __name__ == "__main__" and not test_mode:
+    zone = int(sys.argv[1][-1])  # last char is id => check 0 to 6, 0 operates all zones
+    duration = int(sys.argv[2])  # number of minutes => check 0 to 300
+    on_off = sys.argv[3]
+
+    if zone in range(7) and duration in range(301):
+
+        if zone == 0:
+            if on_off == 'on':
+                open_all()
+            if on_off == 'off':
+                close_all()
+
+        elif on_off == 'on' and duration == 0:
+            open_valve(zone)
+
+        elif on_off == 'off':
+            close_valve(zone)
+
+        else:
+            open_valve_for(zone, duration)
+            while schedule.get_jobs():
+                schedule.run_pending()
+
+    else:
+        print(f"bad zone/duration values: zone={zone}, duration={duration}, on_off={on_off}")
+
+if test_mode:
+    open_valve_for(1, 0.1)
+    while schedule.get_jobs():
+        schedule.run_pending()
+    cleanup()  # cleanup turns everything to input
+
+ sys.exit()
