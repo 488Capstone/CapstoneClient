@@ -407,9 +407,9 @@ def read_adc_for_internal (select, arglist, verbose=True):
 
     val, volt = read_adc(addr, pin)
     finalresult = volt
-    if isinstance(gain, types.FunctionType)
+    if isinstance(gain, types.FunctionType):
         finalresult = gain(volt)
-    elif isinstance(gain, [float, int])
+    elif isinstance(gain, [float, int]):
         finalresult = gain*volt #convert back to original magnitude before the sense ratio was applied
     if verbose:
         timenow = str(datetime.now())
