@@ -6,7 +6,7 @@ from datetime import datetime, date
 Nolan_key = "TjfO_sKLdS4JWxn5j8nKo1FTcC-t8yyI"
 Collin_key = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ"
 
-def solar_radiation_for_dates(lat: float, long: float, dates: list) -> list:
+def solar_radiation_for_dates(dates: list, lat: float, long: float) -> list:
     """Takes list of dates, returns list of (date,solar) tuples"""
     data = fetch_hour_data(lat, long) # one week of 30min data
     tuple_list = parsesolar(data)
@@ -24,8 +24,9 @@ def fetch_hour_data(lat: float, long: float, hours:int = 168) -> json:
 
     apikey, payload, headers = Collin_key, {}, {}
     url = f"https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={apikey}&latitude={lat}&longitude={long}&hours={hours}&format=json"
-    response = requests.request("GET", url, headers=headers, data=payload)
-    return json.loads(response.text)
+    #response = requests.request("GET", url, headers=headers, data=payload)
+    #return json.loads(response.text)
+    return 
 
 def fetch_forecast_data(lat: float, long: float, hours:int = 168) -> json:
     """Gets hourly data. Limited to 10 calls per api key. """
@@ -43,7 +44,8 @@ def parsesolar(data: json) -> tuple:
     # for x in data['estimated_actuals']:
     #     ghi_total += x['ghi']  # W/m2 (mean of 30min)
     #     ave_ghi = ghi_total / len(data['estimated_actuals'])
-    #     daily_solar_radiation = ave_ghi * 0.0864  # converts ghi into MJ / (day * m^2) per Collin # TODO: check this
+    #     daily_solar_radiation = ave_ghi * 0.0864  # converts ghi into MJ / (day * m^2) per Collin # TODO: check this2
+
 
     dailydata = []
     temp = []

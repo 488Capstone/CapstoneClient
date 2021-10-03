@@ -101,7 +101,8 @@ class DBManager:
         return w_d
     
     def get_solar_for_date(self, date: datetime.date) -> float:
-        result = self.my_session.query(HistoryItem).filter(HistoryItem.date == date)
+        query = self.my_session.query(HistoryItem).filter(HistoryItem.date == date)
+        result = query.one_or_none()
         # result = self.get(HistoryItem, date)
         return result.solar
 

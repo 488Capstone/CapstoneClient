@@ -21,7 +21,7 @@ LOG_FILE_NAME = './client_dev.log'
 def isOnRaspi ():
     return os.path.exists("/sys/firmware/devicetree/base/model")
 
-def correct_missing_history_items():
+def correct_missing_history_items(db, lat, long):
     # check db for missing history data: up to 7 days
     missing_history_dates_list = []
     day_delta = timedelta(days = 1)
@@ -32,7 +32,7 @@ def correct_missing_history_items():
         item = db.get(HistoryItem, date)
         if not item:
             missing_history_dates_list.append(date)
-    history_items_list = gethistoricaldata(missing_history_dates_list, lat=my_sys.lat, long=my_sys.long)
+    history_items_list = gethistoricaldata(missing_history_dates_list, lat=lat, long=long)
     for item in history_items_list:
         try:
             db.add(item)
@@ -48,7 +48,7 @@ def correct_missing_history_items():
         solar = db.get_solar_for_date(date)
         if not solar > 0:
             missing_solar_dates_list.append(date)
-    complete_tup_list = solar_radiation_for_dates(missing_solar_dates_list)
+    complete_tup_list = solar_radiation_for_dates(missing_solar_dates_list, lat, long)
     for tup in complete_tup_list:
         result = db.get(HistoryItem, tup[0])
         result.solar = tup[1]
@@ -59,16 +59,20 @@ def correct_missing_history_items():
 def gethistoricaldata(day_list: list, lat: float, long: float) -> list[HistoryItem]:
     """Returns list of HistoryItems, one for each of days in list at given lat [Float], long [Float]."""
 
-    weather_tup_list = get_weather_for_days(day_list, lat, long)
-    solar_tup_list = solar_radiation_for_dates(day_list, lat, long)
+    my_sys = db.get(SystemConfig, "system")
+    offset = my_sys.utc_offset
+
+    weather_tup_list = get_weather_for_days(day_list, lat, long, offset)
+    #solar_tup_list = solar_radiation_for_dates(day_list, lat, long)
     
     history_item_list = []
     for day in day_list:
-        weather_tup = [tup for tup in weather_tup_list if day in tup]
-        solar_tup = [tup for tup in solar_tup_list if day in tup]
+        weather_tup = [tup for tup in weather_tup_list if day in tup][0]
+        #solar_tup = [tup for tup in solar_tup_list if day in tup]
         item = HistoryItem()
         item.populate_from_weather_item(weather_tup[1])
-        item.solar = solar_tup[1]
+        #item.solar = solar_tup[1]
+        item.solar = 1
         item.calculate_et_and_water_deficit()
         history_item_list.append(item)
     return history_item_list
@@ -162,7 +166,7 @@ if __name__ == "__main__":
     db = DBManager()
     db.start_databases()
     
-    my_sys = db.my_sys
+    
     
     # db.start_databases()
 

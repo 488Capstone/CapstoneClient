@@ -1,7 +1,7 @@
 import requests
 import json
 # import time
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 
 class WeatherDayItem:
     date: date
@@ -12,10 +12,10 @@ class WeatherDayItem:
     temp_max: float 
     precip: float
 
-def get_weather_for_days(days: list, lat: float, long: float) -> list:
+def get_weather_for_days(days: list, lat: float, long: float, offset) -> list:
     weather_tup_list = []
     for day in days:
-        data = fetch_weather_data(day, lat, long)
+        data = fetch_weather_data(day, lat, long, offset)
         item = parseweather(data)
         weather_tup = (day, item)
         weather_tup_list.append(weather_tup)
@@ -24,16 +24,15 @@ def get_weather_for_days(days: list, lat: float, long: float) -> list:
 
 
 
-def fetch_weather_data(date, lat, long) -> json:
+def fetch_weather_data(date, lat, long, offset) -> json:
+    
+    start = int(datetime.combine(date, offset).timestamp())
+    end = int(datetime.combine(date, offset).timestamp())
+    # end = int(datetime.combine(date, time.max).timestamp())
 
-    start = int(datetime.combine(date, time.min).timestamp())
-    end = int(datetime.combine(date, time.max).timestamp())
+    print(f"start time = {start}, end time = {end}")
 
-    # days = 1
-    # window = days * 24 * 60 * 60  # seconds in a day, api max 7 days - most recent 7 to match solar data
     appid = "ae7cc145d2fea84bea47dbe1764f64c0"
-    # start = round(time.time()-window)
-    # end = round(time.time())
 
     url = "http://history.openweathermap.org/data/2.5/history/city?lat={}&lon={}&start={}&end={}&appid={}" \
         .format(lat, long, start, end, appid)

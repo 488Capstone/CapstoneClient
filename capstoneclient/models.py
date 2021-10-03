@@ -116,6 +116,7 @@ class SystemConfig(Base):
     zipcode = Column(Integer)
     city = Column(String)
     state = Column(String)
+    utc_offset = Column(PickleType) # +HHMM or -HHMM
     lat = Column(Float)
     long = Column(Float)
     setup_complete = Column(Boolean)

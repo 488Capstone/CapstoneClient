@@ -219,14 +219,19 @@ def startup():
     # Get location data from IP address:
     loc = requests.get("http://ipapi.co/json/?key=H02y7T8oxOo7CwMHhxvGDOP7JJqXArMPjdvMQ6XhA6X4aR4Tub").json()
 
+    raw_utc_offset = loc["utc_offset"] # +HHMM or -HHMM
+    hrs = int(raw_utc_offset[1:3])
+    utc_delta = timedelta(hours=hrs)
+
     # enter location into system database:
     # TODO: zip not always 5 digits
-    my_sys.city, my_sys.state, my_sys.zipcode, my_sys.lat, my_sys.long = (
+    my_sys.city, my_sys.state, my_sys.zipcode, my_sys.lat, my_sys.long, my_sys.utc_offset = (
         loc["city"],
         loc["region_code"],
         loc["postal"],
         loc["latitude"],
         loc["longitude"],
+        utc_delta
     )
     db.commit() # commit in case next part doesnt work
 
@@ -432,7 +437,7 @@ def raspi_testing():
 db = DBManager()
 db.start_databases
 
-my_sys = db.my_sys
+
 # db.start_databases()
 
 my_sys = db.get(SystemConfig, "system")
