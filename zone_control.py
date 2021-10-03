@@ -23,7 +23,7 @@ def pulse_zone(zonepin):
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
     GPIO.output(zonepin, GPIO.HIGH)
-    while (datetime.now() - start_time) < timelimit
+    while ((datetime.now() - start_time) < timelimit):
         pass
     GPIO.output(zonepin, GPIO.LOW)
 
