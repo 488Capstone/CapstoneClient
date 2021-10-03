@@ -11,6 +11,8 @@ from capstoneclient.models import HistoryItem
 
 class DBManager:
 
+
+
     def __init__(self):
         clientDir = os.getenv('SIOclientDir')
         if clientDir is not None:
@@ -22,7 +24,34 @@ class DBManager:
             self.start_databases()
         else:
             print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
-
+    @property
+    def my_sys(self): 
+        return self.get(SystemConfig, "system")
+    @property
+    def zone1(self): 
+        return self.get(ZoneConfig, "zone1")
+    @property  
+    def zone2(self): 
+        return self.get(ZoneConfig, "zone2")
+    @property
+    def zone3(self): 
+        return self.get(ZoneConfig, "zone3")
+    @property
+    def zone4(self): 
+        return self.get(ZoneConfig, "zone4")
+    @property
+    def zone5(self): 
+        return self.get(ZoneConfig, "zone5")
+    @property
+    def zone6(self): 
+        return self.get(ZoneConfig, "zone6")
+    @property
+    def zone_list(self): 
+        return [self.zone1, self.zone2, self.zone3, self.zone4, self.zone5, self.zone6]
+    
+    
+    
+    
     def start_databases(self):
         """ Initializes database from models, creates tables if not present."""
         Base.metadata.create_all(self.engine)
@@ -82,15 +111,7 @@ class DBManager:
             item.solar = tup[1]
         self.my_session.commit()
 
-    my_sys = get(SystemConfig, "system")
-    zone1 = get(ZoneConfig, "zone1")
-    zone2 = get(ZoneConfig, "zone2")
-    zone3 = get(ZoneConfig, "zone3")
-    zone4 = get(ZoneConfig, "zone4")
-    zone5 = get(ZoneConfig, "zone5")
-    zone6 = get(ZoneConfig, "zone6")
-
-    zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
+    
 
 # use/test:
 # from datetime import datetime

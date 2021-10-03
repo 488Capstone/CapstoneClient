@@ -5,7 +5,7 @@
 #####################################################################
 
 import os
-from re import re
+import re
 import sys
 from datetime import datetime, timedelta
 
