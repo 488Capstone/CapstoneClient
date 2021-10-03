@@ -502,6 +502,11 @@ if __name__ == "__main__":
     elif choice == "DEV_SOIL":
         print("{}---DEV: SOIL ".format(str(datetime.now())))
         soil_moist, soil_temp = read_soil_sensor()   # value between [200, 2000]
+        print(f"Soil Moisture: {soilmoisture}, Soil Temp: {soiltemp}")
+    elif choice == "DEV_BARO":
+        print("{}---DEV: BARO ".format(str(datetime.now())))
+        baro = read_baro_sensor()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
+        print(f"Baro Sensor: {baro}")
     elif choice == "DEV_ADC":
         print("{}---DEV: ADC ".format(str(datetime.now())))
         read_adc_for("valve1_current")
