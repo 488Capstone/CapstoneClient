@@ -14,6 +14,7 @@ RASPI_PIN = {
     "stat2":22,
         }
 
+# DW 2021-10-03-14:19 everything below here was set up for GPIO.BOARD mode and is no longer valid
 #RASPI_PIN_NAMES = ["3v3",
 #"5v_1",
 #"sda",

@@ -8,6 +8,8 @@ import sys
 import time
 import requests
 import json
+import types #For the adc conversions
+import math #DW natural log needed for temp eq
 from datetime import date, datetime
 from crontab import CronTab
 from capstoneclient.models import SensorEntry, SystemZoneConfig, HistoryItem
@@ -376,6 +378,22 @@ def create_cron_job(cmdstr, schedstr, commentText):
     else:
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
+def vadc_to_temp(vadc):
+    Vsupply = 3.3
+    R1 = 4.99e3
+    R0 = 10e3
+    Rnew = (vadc*R1)/(Vsupply-vadc)
+    B = 3380
+    Tref = 25
+    kelvin_shift = 273.15
+    Tnew = -1/(math.log(Rnew/R0)/(-B) - 1/Tref) - kelvin_shift
+    return Tnew
+
+def vadc_to_current(vadc):
+    #currentGain equation is Vadc * 1/(4mA/V * Rsense * Rgain) = I_sense
+    #DW 2021-10-03-14:47 I have a OneNote eq showing how to derive this
+    currentGain = (1/(4e-3*8e-3*41.2e3))
+    return currentGain*vadc
 
 # DW function used as an internal wrapper around code that is the same between two branches of the read_adc_for function
 def read_adc_for_internal (select, arglist, verbose=True):
@@ -386,13 +404,18 @@ def read_adc_for_internal (select, arglist, verbose=True):
         gain = arglist[3]
     else:
         gain = 1
+
     val, volt = read_adc(addr, pin)
-    volt = gain*volt #convert back to original magnitude before the sense ratio was applied
+    finalresult = volt
+    if isinstance(gain, types.FunctionType)
+        finalresult = gain(volt)
+    elif isinstance(gain, [float, int])
+        finalresult = gain*volt #convert back to original magnitude before the sense ratio was applied
     if verbose:
         timenow = str(datetime.now())
         #print(f"{timenow}---{select}: ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
-        print(f"{timenow}---{select}: {volt} {unit}")
-    return volt
+        print(f"{timenow}---{select}: {finalresult} {unit}")
+    return finalresult
 
 # DW This function is a convenience wrapper around the read_adc. You use the pin/net name from the schematic of our PC board 
 #   to tell it what value to read/return!
@@ -409,17 +432,17 @@ def read_adc_for (select, verbose=True):
             #TODO need to add the gain terms for temp sense
             #   Name        :  addr pin unit gain_conversion
     choices = {
-            "valve1_current": [0x48, 0, 'A'],
-            "valve2_current": [0x48, 1, 'A'],
-            "valve3_current": [0x48, 2, 'A'],
-            "valve4_current": [0x48, 3, 'A'],
-            "valve5_current": [0x49, 0, 'A'],
-            "valve6_current": [0x49, 1, 'A'],
-            "solar_current" : [0x49, 2, 'A'],
-            "ps_current"    : [0x49, 3, 'A'],
+            "valve1_current": [0x48, 0, 'A', vadc_to_current],
+            "valve2_current": [0x48, 1, 'A', vadc_to_current],
+            "valve3_current": [0x48, 2, 'A', vadc_to_current],
+            "valve4_current": [0x48, 3, 'A', vadc_to_current],
+            "valve5_current": [0x49, 0, 'A', vadc_to_current],
+            "valve6_current": [0x49, 1, 'A', vadc_to_current],
+            "solar_current" : [0x49, 2, 'A', vadc_to_current],
+            "ps_current"    : [0x49, 3, 'A', vadc_to_current],
             "vbatt_sense"   : [0x4a, 0, 'V', (49.9+523)/49.9],
-            "temp_sense"    : [0x4a, 1, 'deg_C'],
-            "pot"           : [0x4a, 2, 'V'],
+            "temp_sense"    : [0x4a, 1, 'deg_C', vadc_to_temp],
+            "pot"           : [0x4a, 2, 'V', 1],
             "5v_sense"      : [0x4b, 0, 'V', (49.9+102)/49.9],
             "9v_sense"      : [0x4b, 1, 'V', (49.9+221)/49.9],
             "solar_sense"   : [0x4b, 2, 'V', (49.9+523)/49.9],
