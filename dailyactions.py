@@ -482,6 +482,10 @@ if __name__ == "__main__":
             errMsg = traceback.format_exc()
             print(errMsg)
 
+        print(f"{str(datetime.now())}---{choice}: ",end='')
+        for name, val in [["temp_c", baro[0]], ["pressure", baro[2]], ["sl_moist", soil_moist], ["sl_temp", soil_temp]]:
+            print(f"{name}({val}) ",end='')
+        print("")
         sample = SensorEntry(datetime=datetime.now(), temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
         db.add(sample)
 

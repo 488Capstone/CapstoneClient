@@ -5,25 +5,33 @@ import RPi.GPIO as GPIO
 from datetime import datetime, timedelta
 import sys
 import schedule
+from capstoneclient.raspi_pins import RASPI_PIN_NAMES, RASPI_PIN_NUMS, RASPI_PIN
 
 # zone 1: GPIO19, zone 2: GPIO26, zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
-zone_lookup = (19, 26, 18, 23, 24, 25)
+zone_lookup = (
+    RASPI_PIN["valve1_enable"],
+    RASPI_PIN["valve2_enable"],
+    RASPI_PIN["valve3_enable"],
+    RASPI_PIN["valve4_enable"],
+    RASPI_PIN["valve5_enable"],
+    RASPI_PIN["valve6_enable"]
+    )
 
 
 def open_valve(zn: int):
     channel = zone_lookup[zn-1]
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(channel, GPIO.OUT)
+    #GPIO.setmode(GPIO.BCM)
+    #GPIO.setup(channel, GPIO.OUT)
     GPIO.output(channel, GPIO.HIGH)
     now_time = datetime.now()
     print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) ON")
 
 
 def open_all():
-    GPIO.setmode(GPIO.BCM)
+    #GPIO.setmode(GPIO.BCM)
     for num in range(6):
         channel = zone_lookup[num]
-        GPIO.setup(channel, GPIO.OUT)
+        #GPIO.setup(channel, GPIO.OUT)
         GPIO.output(channel, GPIO.HIGH)
         now_time = datetime.now()
         print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) ON")
@@ -31,8 +39,8 @@ def open_all():
 
 def close_valve(zn: int):
     channel = zone_lookup[zn - 1]
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(channel, GPIO.OUT)
+    #GPIO.setmode(GPIO.BCM)
+    #GPIO.setup(channel, GPIO.OUT)
     GPIO.output(channel, GPIO.LOW)
     now_time = datetime.now()
     print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) OFF")
@@ -40,14 +48,13 @@ def close_valve(zn: int):
 
 
 def close_all():
-    GPIO.setmode(GPIO.BCM)
+    #GPIO.setmode(GPIO.BCM)
     for num in range(6):
         channel = zone_lookup[num]
-        GPIO.setup(channel, GPIO.OUT)
+        #GPIO.setup(channel, GPIO.OUT)
         GPIO.output(channel, GPIO.LOW)
         now_time = datetime.now()
         print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) OFF")
-
 
 def open_valve_for(zn: int, dur):
     open_valve(zn)
