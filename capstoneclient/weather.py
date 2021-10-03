@@ -1,7 +1,7 @@
 import requests
 import json
-import time
-from datetime import date, datetime
+# import time
+from datetime import date, datetime, time
 
 class WeatherDayItem:
     date: date
@@ -26,8 +26,8 @@ def get_weather_for_days(days: list, lat: float, long: float) -> list:
 
 def fetch_weather_data(date, lat, long) -> json:
 
-    start = datetime.combine(date, datetime.min.time()).timestamp()
-    end = datetime.combine(date, datetime.max.time()).timestamp()
+    start = int(datetime.combine(date, time.min).timestamp())
+    end = int(datetime.combine(date, time.max).timestamp())
 
     # days = 1
     # window = days * 24 * 60 * 60  # seconds in a day, api max 7 days - most recent 7 to match solar data
@@ -115,3 +115,8 @@ def parseweather(data: json): # -> list[HistoryItem]:
         # weather_history_list.append(new_day)
 
     return new_day
+
+
+# weather_data = json.dumps(fetch_weather_data(datetime.today().date(),-33.856784, 151.215297))
+# with open("data/weather_data.json", 'w') as f:
+#     f.write(weather_data)

@@ -45,9 +45,6 @@ def parsesolar(data: json) -> tuple:
     #     ave_ghi = ghi_total / len(data['estimated_actuals'])
     #     daily_solar_radiation = ave_ghi * 0.0864  # converts ghi into MJ / (day * m^2) per Collin # TODO: check this
 
-    
-
-
     dailydata = []
     temp = []
 

@@ -396,7 +396,7 @@ def raspi_testing():
 
     except Exception as e:
         print(f" Read Failed, {repr(e)}")
-    sensor_data = [datetime.datetime.now(), baro_data[1], baro_data[2], soil_data]
+    sensor_data = [datetime.now(), baro_data[1], baro_data[2], soil_data]
 
     print("Welcome aboard, matey.")
     print("Menu:")
@@ -407,7 +407,7 @@ def raspi_testing():
     choice = input("Choose wisely. ")
     if choice == "0":
         print("Exiting program")
-        exit()
+        sys.exit()
     if choice == "1":
         print("Sensor data:")
         print("Timestamp: ", sensor_data[0])

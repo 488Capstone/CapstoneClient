@@ -1,0 +1,36 @@
+{
+    "message": "Count: 1",
+    "cod": "200",
+    "city_id": 1,
+    "calctime": 0.00383797,
+    "cnt": 1,
+    "list": [
+        {
+            "dt": 1633233600,
+            "main": {
+                "temp": 298.18,
+                "feels_like": 297.86,
+                "pressure": 999,
+                "humidity": 43,
+                "temp_min": 295.24,
+                "temp_max": 301.38
+            },
+            "wind": {
+                "speed": 0.45,
+                "deg": 5,
+                "gust": 2.24
+            },
+            "clouds": {
+                "all": 0
+            },
+            "weather": [
+                {
+                    "id": 800,
+                    "main": "Clear",
+                    "description": "clear sky",
+                    "icon": "01d"
+                }
+            ]
+        }
+    ]
+}

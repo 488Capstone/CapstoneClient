@@ -25,9 +25,9 @@ def correct_missing_history_items():
     # check db for missing history data: up to 7 days
     missing_history_dates_list = []
     day_delta = timedelta(days = 1)
-    today = datetime.date.today()
+    today = datetime.today()
     for i in range(7):
-        date = today - (i * day_delta)
+        date = (today - (i * day_delta)).date()
         # check there's a history item for date
         item = db.get(HistoryItem, date)
         if not item:
@@ -156,12 +156,13 @@ else:
 ##############################################
 #DW 2021-09-18-16:28 need to add this in so 'import' doesnt run this code
 #   We only want this code running when the script is called standalone.
+db = DBManager()
+zone_list = db.zone_list
+my_sys = db.my_sys
 
 if __name__ == "__main__":
 
-    db = DBManager()
-    zone_list = db.zone_list
-    my_sys = db.my_sys
+    
     # db.start_databases()
 
     #DW 2021-09-18-14:49 - Collin had this set as argv[0], but that would return the script name, wouldn't it? It was not working for me. Now this is working.
