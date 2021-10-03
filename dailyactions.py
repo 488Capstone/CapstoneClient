@@ -384,8 +384,8 @@ def vadc_to_temp(vadc):
     R0 = 10e3
     Rnew = (vadc*R1)/(Vsupply-vadc)
     B = 3380
-    Tref = 25
     kelvin_shift = 273.15
+    Tref = 25 + kelvin_shift
     Tnew = -1/(math.log(Rnew/R0)/(-B) - 1/Tref) - kelvin_shift
     return Tnew
 
