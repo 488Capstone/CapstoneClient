@@ -34,15 +34,17 @@ def set_valve(zn, open_bool):
     channel = zone_lookup[zn-1]
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(POLARITY, GPIO.OUT)
+    state_str = "ON"
     if open_bool:
         GPIO.output(POLARITY, GPIO.HIGH)
     else:
+        state_str = "OFF"
         GPIO.output(POLARITY, GPIO.LOW)
 
     pulse_zone(channel)
     now_time = datetime.now()
     cleanup()
-    print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) ON")
+    print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) {state_str}")
 
 def open_valve(zn: int):
     set_valve(zn, True)
