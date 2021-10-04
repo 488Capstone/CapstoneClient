@@ -5,11 +5,11 @@
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from crontab import CronTab
 
-from capstoneclient.models import SensorEntry
+from capstoneclient.models import Schedule, SensorEntry
 from capstoneclient.db_manager import DBManager
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 
@@ -43,6 +43,22 @@ def read_sensors():
 
     sample = SensorEntry(datetime=datetime.now(), temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
     db.add(sample)
+
+def check_in():
+
+    running_freq = 15
+
+    now_dt = datetime.now()
+    delta = timedelta(minutes = running_freq)
+    prev_dt = now_dt - delta
+
+    for zone_num in my_sys.zones_enabled:
+        current_zone = zone_list[zone_num - 1]
+    
+        should_be_on_auto = current_zone.schedule.should_be_on(now_dt, prev_dt)
+        should_be_on_man = current_zone.manual_schedule.should_be_on(now_dt, prev_dt)
+
+
 
 # def daily_update():
 #     my_sys = db.get(SystemConfig, "system")

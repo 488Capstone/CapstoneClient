@@ -4,6 +4,21 @@ from typing import List
 
 from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date
 from sqlalchemy.orm import declarative_base
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from sqlalchemy.sql.elements import True_
 from sqlalchemy.sql.sqltypes import PickleType
 
 from capstoneclient.weather import WeatherDayItem
@@ -113,7 +128,7 @@ class HistoryItem(Base):
 class SystemConfig(Base):
     __tablename__ = "system_configuration"
     id = Column(String, primary_key=True)
-    zipcode = Column(Integer)
+    zipcode = Column(String)
     city = Column(String)
     state = Column(String)
     utc_offset = Column(PickleType) # +HHMM or -HHMM
@@ -239,10 +254,17 @@ class Schedule(List):
     def get_prev_entry():
         pass
 
-    # def __repr__(self):
+    def should_be_on(self, now_dt:datetime, prev_dt:datetime):
+        # match any open events between the times
+        # filter on day = today
+        match = [i for i in self if i.day_num == datetime.today().weekday()]
+        if match:
+            # filter on prev < time < now
+            match = [i for i in match if i.start_time > prev_dt.time() and i.start_time < now_dt.time()]
+            if match:
+                return True
+
         
-    #     for entry_item in self:
-    #         return entry_item
 
 
 test_mode = 0
