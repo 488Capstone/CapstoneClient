@@ -24,9 +24,8 @@ def fetch_hour_data(lat: float, long: float, hours:int = 168) -> json:
 
     apikey, payload, headers = Collin_key, {}, {}
     url = f"https://api.solcast.com.au/world_radiation/estimated_actuals?api_key={apikey}&latitude={lat}&longitude={long}&hours={hours}&format=json"
-    #response = requests.request("GET", url, headers=headers, data=payload)
-    #return json.loads(response.text)
-    return 
+    response = requests.request("GET", url, headers=headers, data=payload)
+    return json.loads(response.text)
 
 def fetch_forecast_data(lat: float, long: float, hours:int = 168) -> json:
     """Gets hourly data. Limited to 10 calls per api key. """

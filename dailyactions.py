@@ -50,25 +50,25 @@ def read_sensors():
     sample = SensorEntry(datetime=datetime.now(), temp_c=baro[0], pressure_hPa=baro[2], moisture=soil_moist)
     db.add(sample)
 
-def daily_update():
-    my_sys = db.get(SystemConfig, "system")
-    zone1 = db.get(ZoneConfig, "zone1")
-    zone2 = db.get(ZoneConfig, "zone2")
-    zone3 = db.get(ZoneConfig, "zone3")
-    zone4 = db.get(ZoneConfig, "zone4")
-    zone5 = db.get(ZoneConfig, "zone5")
-    zone6 = db.get(ZoneConfig, "zone6")
-    zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
+# def daily_update():
+#     my_sys = db.get(SystemConfig, "system")
+#     zone1 = db.get(ZoneConfig, "zone1")
+#     zone2 = db.get(ZoneConfig, "zone2")
+#     zone3 = db.get(ZoneConfig, "zone3")
+#     zone4 = db.get(ZoneConfig, "zone4")
+#     zone5 = db.get(ZoneConfig, "zone5")
+#     zone6 = db.get(ZoneConfig, "zone6")
+#     zone_list = [zone1, zone2, zone3, zone4, zone5, zone6]
 
-    num_corrections = correct_missing_history_items()
-    if num_corrections > 0:
-        # recalc total deficit for past week
-        rolling_water_deficit = db.get_previous_week_water_deficit
-        # update auto schedule for each zone based on new daily data
-        for zone_num in my_sys.zones_enabled:
-            current_zone = zone_list[zone_num - 1]
-            current_zone.water_algo(rolling_water_deficit)
-    db.my_session.commit()
+#     num_corrections = correct_missing_history_items()
+#     if num_corrections > 0:
+#         # recalc total deficit for past week
+#         rolling_water_deficit = db.get_previous_week_water_deficit
+#         # update auto schedule for each zone based on new daily data
+#         for zone_num in my_sys.zones_enabled:
+#             current_zone = zone_list[zone_num - 1]
+#             current_zone.water_algo(rolling_water_deficit)
+#     db.my_session.commit()
 
     # probe('waterdeficit')
     # probe('today_history_item.etcalc')
@@ -135,7 +135,8 @@ if __name__ == "__main__":
     if choice == "readsensors":
         read_sensors()
     if choice == "dailyupdate":
-        daily_update()
+        #daily_update()
+        pass
     if choice == "DEV":
         print("{}---DEV: test ".format(str(datetime.now())))
     if choice == "DEV_SOIL":
