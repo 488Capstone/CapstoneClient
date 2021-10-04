@@ -163,8 +163,16 @@ def my_system():
             f"Application rate is {zone.application_rate} inches per hour."
             f"Manual mode = {zone.is_manual_mode}"
         )
-    input("Press any key to continue.")
-
+    userInput = input("[E]dit or press other any key to continue.")
+    if userInput not in ["E", "e"]:
+        return
+    else:
+        userInput = input("Edit auto/man, enabled zones, and schedule from Schedule menu item. Enter valid zip or anything else to continue")
+        if not re.fullmatch(r"\d{6}", userInput):
+            return
+        else:
+            my_sys.zipcode = userInput
+            db.commit()
 def my_schedule():
     # schedule is zone specific, saved in zone config
     # schedule can be auto-set or manual - manual ignores all remote data, schedule is auto adjusted
