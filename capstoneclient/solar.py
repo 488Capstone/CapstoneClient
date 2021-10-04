@@ -1,7 +1,7 @@
 from typing import List
 import requests
 import json
-from datetime import datetime, date
+from datetime import datetime
 
 Nolan_key = "TjfO_sKLdS4JWxn5j8nKo1FTcC-t8yyI"
 Collin_key = "N5x3La865UcWH67BIq3QczgKVSu8jNEJ"

@@ -11,13 +11,8 @@ from datetime import datetime, timedelta
 
 import requests
 from crontab import CronTab
-from sqlalchemy.sql.expression import null
-from dailyactions import (
-    ZONE_CONTROL_COMMENT_NAME,
-    LOG_FILE_NAME,
-    isOnRaspi,
-    #correct_missing_history_items
-)
+
+from dailyactions import ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import HistoryItem, SystemConfig, ZoneConfig, ScheduleEntry, Schedule
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
@@ -50,7 +45,10 @@ else:
     DWDBG = True
     input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
 
-def correct_missing_history_items(offset, lat, long):
+def fetch_missing_history_items(offset, lat, long) -> int:
+    """Checks for missing history items in db for dates yesterday and 7 previous, gets data. 
+    Then looks for missing solar in same range, gets data. 
+    Returns the number of updates done"""
     # check db for missing history data: up to 7 days, not including today
     missing_history_dates_list = []
     day_delta = timedelta(days = 1)
@@ -61,8 +59,9 @@ def correct_missing_history_items(offset, lat, long):
         item = db.get(HistoryItem, date)
         if not item:
             missing_history_dates_list.append(date)
-    print(f"missing these dates: {missing_history_dates_list}")
+    
     if missing_history_dates_list:
+        print(f"Fetching weather data for these dates: {missing_history_dates_list}")
         history_items_list = gethistoricaldata(offset, missing_history_dates_list, lat=lat, long=long)
         for item in history_items_list:
             try:
@@ -72,24 +71,22 @@ def correct_missing_history_items(offset, lat, long):
                 print("capstoneclient startup(): cant add history item to db (probably already there)")
                 db.my_session.rollback()
 
-    # check db for missing solar data: up to 7 days
+    # check db for missing solar data: up to 7 days - this may be the case if api didnt work previously (max 10 calls)
     missing_solar_dates_list = []
     for i in range(1, 8):
-        
         date = (today - (i * day_delta)).date()
-        # check there's a history item for date
-        # print(f"looking for solar data for date {date}")
         solar = db.get_solar_for_date(date)
         if not solar > 0:
             missing_solar_dates_list.append(date)
     if missing_solar_dates_list:
+        print(f"Fetching solar data for these dates: {missing_solar_dates_list}")
         complete_tup_list = solar_radiation_for_dates(missing_solar_dates_list, lat, long)
         for tup in complete_tup_list:
             result = db.get(HistoryItem, tup[0])
             result.solar = tup[1]
         db.commit()
     num_corrections = len(missing_history_dates_list)+len(missing_solar_dates_list)
-    print(f"num corrections = {num_corrections}")
+    # print(f"num corrections = {num_corrections}")
     return num_corrections
 
 
@@ -100,31 +97,18 @@ def gethistoricaldata(offset, day_list: list, lat: float, long: float) -> list[H
     #offset = my_sys.utc_offset
 
     weather_list = get_weather_for_days(day_list, lat, long, offset)
-    #print(f"weather tup list first item date= {weather_list[0].date}")
-    
-    #print(f"weather tup list second item date= {weather_list[1].date}") # BAD
-    #solar_tup_list = solar_radiation_for_dates(day_list, lat, long)
+    solar_list = solar_radiation_for_dates(day_list, lat, long)
     
     history_item_list = []
     for day in day_list:
-        #weather_tup = [tup for tup in weather_tup_list if day in tup][0]
-        #match_index = next(i for i, (v, *_) in enumerate(weather_list) if v == day)
-        match = [x for x in weather_list if x.date == day]
-        
-        #print(f"day is {day}. match length is {len(match)}")
-        #weather_tup = weather_list[match_index]
-        #print(f"weather tup is {weather_tup}, has item with date {weather_tup[1]}")  # BAD
-        weather_item = match[0]
-        #print(f"weather item to use to populate: {weather_item.date}")  # Bad
-        #print(f"weather_tup = {weather_tup}")
-        #solar_tup = [tup for tup in solar_tup_list if day in tup]
+        matching_weather_item = [x for x in weather_list if x.date == day][0]
+        matching_solar_item = [x for x in solar_list if day in x][0][1]
         item = HistoryItem()
-        item.populate_from_weather_item(weather_item)
-        #item.solar = solar_tup[1]
-        item.solar = 1
+        item.populate_from_weather_item(matching_weather_item)
+        print(f"applying solar item: {matching_solar_item} for day {day}")
+        item.solar = matching_solar_item
         item.calculate_et_and_water_deficit()
         history_item_list.append(item)
-        #print(f"history_item_list adding this item {item} with this date {item.date}") # always adding same item
     return history_item_list
 
 # op_menu() is the landing spot for operations.
@@ -319,12 +303,8 @@ def startup():
 
     # get historical weather / solar data, build database.
     # This does the past week as a starting point for a water deficit.
-    correct_missing_history_items(my_sys.utc_offset, my_sys.lat, my_sys.long)
+    fetch_missing_history_items(my_sys.utc_offset, my_sys.lat, my_sys.long)
 
- 
-
-
-        
     print("Database of historical environmental data built.")
 
     # build system info:
@@ -378,78 +358,79 @@ def startup():
     print("Setup complete. Redirecting to main menu.")
     my_sys.setup_complete = True
     db.commit()
+
     op_menu()
 
 
 def task_scheduler():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     clientDir = os.getenv("SIOclientDir")
-    if clientDir is not None:
-        # DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
-        #   tells subsequent scripts/programs what the location of the client side code is
-        prescriptCmd = "cd {}; ".format(clientDir)
-        commentText = "SIO-LogFileReset"
-        schedule.remove_all(comment=commentText)
-        log_update = schedule.new(
-            command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(
-                prescriptCmd, LOG_FILE_NAME
-            ),
-            comment=commentText,
-        )
-        # DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
-        prescriptCmd += "./runPy.sh "
-        commentText = "SIO-Daily"
-        schedule.remove_all(comment=commentText)
-        daily_update = schedule.new(
-            command=" {0} ./dailyactions.py dailyupdate ".format(
-                prescriptCmd, LOG_FILE_NAME
-            ),
-            comment=commentText,
-        )
-        if not DWDBG:
-            # normal operation
-            # every day at 3am
-            daily_update.setall("0 3 * * *")
-            # every 14 days at 3am?
-            log_update.setall("0 3 */14 * *")
-        else:
-            # every 10min
-            daily_update.setall("*/10 * * * *")
-            log_update.setall("*/50 * * * *")
+    # if clientDir is not None:
+    #     # DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
+    #     #   tells subsequent scripts/programs what the location of the client side code is
+    #     prescriptCmd = "cd {}; ".format(clientDir)
+    #     commentText = "SIO-LogFileReset"
+    #     schedule.remove_all(comment=commentText)
+    #     log_update = schedule.new(
+    #         command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(
+    #             prescriptCmd, LOG_FILE_NAME
+    #         ),
+    #         comment=commentText,
+    #     )
+        # # DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
+        # prescriptCmd += "./runPy.sh "
+        # commentText = "SIO-Daily"
+        # schedule.remove_all(comment=commentText)
+        # daily_update = schedule.new(
+        #     command=" {0} ./dailyactions.py dailyupdate ".format(
+        #         prescriptCmd, LOG_FILE_NAME
+        #     ),
+        #     comment=commentText,
+        # )
+        # if not DWDBG:
+        #     # normal operation
+        #     # every day at 3am
+        #     daily_update.setall("0 3 * * *")
+        #     # every 14 days at 3am?
+        #     log_update.setall("0 3 */14 * *")
+        # else:
+        #     # every 10min
+        #     daily_update.setall("*/10 * * * *")
+        #     log_update.setall("*/50 * * * *")
 
-        if on_raspi:
-            # normal operation
-            commentText = "SIO-Sensors"
-            schedule.remove_all(comment=commentText)
-            sensor_query = schedule.new(
-                command="{0} ./dailyactions.py readsensors".format(
-                    prescriptCmd, LOG_FILE_NAME
-                ),
-                comment=commentText,
-            )
-            sensor_query.setall("*/5 * * * *")
-        else:
-            commentText = "SIO-DEV"
-            schedule.remove_all(comment=commentText)
-            dev_mode = schedule.new(
-                command="{0} ./dailyactions.py DEV".format(prescriptCmd, LOG_FILE_NAME),
-                comment=commentText,
-            )
-            # every 1 minute
-            dev_mode.setall("*/1 * * * *")
+    #     if on_raspi:
+    #         # normal operation
+    #         commentText = "SIO-Sensors"
+    #         schedule.remove_all(comment=commentText)
+    #         sensor_query = schedule.new(
+    #             command="{0} ./dailyactions.py readsensors".format(
+    #                 prescriptCmd, LOG_FILE_NAME
+    #             ),
+    #             comment=commentText,
+    #         )
+    #         sensor_query.setall("*/5 * * * *")
+    #     else:
+    #         commentText = "SIO-DEV"
+    #         schedule.remove_all(comment=commentText)
+    #         dev_mode = schedule.new(
+    #             command="{0} ./dailyactions.py DEV".format(prescriptCmd, LOG_FILE_NAME),
+    #             comment=commentText,
+    #         )
+    #         # every 1 minute
+    #         dev_mode.setall("*/1 * * * *")
 
-        schedule.write()
-        print(schedule)
-    else:
-        print(
-            "env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient"
-        )
+    #     schedule.write()
+    #     print(schedule)
+    # else:
+    #     print(
+    #         "env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient"
+    #     )
     return
 
 
 def application_rate_cal():
     print("Lets get calibrating!")
-    zone_num = null
+    zone_num = None
     while zone_num not in range(1,7):
         zone_num = input("Update application rate: Which zone? Enter 1 through 6")
         print("Enter integer 1 through 6 to continue")
@@ -518,10 +499,7 @@ def raspi_testing():
 #                                            #
 ##############################################
 db = DBManager()
-db.start_databases
-
-
-# db.start_databases()
+db.start_databases()
 
 my_sys = db.get(SystemConfig, "system")
 zone1 = db.get(ZoneConfig, "zone1")

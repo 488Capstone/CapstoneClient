@@ -5,17 +5,13 @@
 
 import os
 import sys
-from datetime import datetime, timedelta, date
+from datetime import datetime
 
 from crontab import CronTab
 
-from capstoneclient.models import SensorEntry, SystemConfig, ZoneConfig, HistoryItem
+from capstoneclient.models import SensorEntry
 from capstoneclient.db_manager import DBManager
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
-
-
-
-
 
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
@@ -23,8 +19,6 @@ LOG_FILE_NAME = './client_dev.log'
 
 def isOnRaspi ():
     return os.path.exists("/sys/firmware/devicetree/base/model")
-
-
 
 def read_sensors():
     soil_moist = 0
@@ -73,12 +67,12 @@ def read_sensors():
     # probe('waterdeficit')
     # probe('today_history_item.etcalc')
 
-on_raspi = isOnRaspi()
-if on_raspi:
-    # this try/except lets code function outside of raspberry pi for development.
-    pass
-else:
-    DWDBG = True
+# on_raspi = isOnRaspi()
+# if on_raspi:
+#     # this try/except lets code function outside of raspberry pi for development.
+#     pass
+# else:
+#     DWDBG = True
 
 # Debug mode variable used to enable additional print statements 
 DWDBG = False 
@@ -110,15 +104,10 @@ else:
 #DW 2021-09-18-16:28 need to add this in so 'import' doesnt run this code
 #   We only want this code running when the script is called standalone.
 
-
 if __name__ == "__main__":
     db = DBManager()
     db.start_databases()
-    
-    
-    
-    # db.start_databases()
-
+   
     #DW 2021-09-18-14:49 - Collin had this set as argv[0], but that would return the script name, wouldn't it? It was not working for me. Now this is working.
     #DW the reason he had it set to 0 might be because when importing the file in capstoneclient.py it would throw and error if set to 1!
     
