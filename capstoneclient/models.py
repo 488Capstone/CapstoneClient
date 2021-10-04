@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 import calendar
 from typing import List
 
-from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
+from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql.sqltypes import PickleType
 
@@ -139,15 +139,6 @@ class ZoneConfig(Base):
     # plant_type = Column(String)
     # microclimate = Column(String)
     # slope = Column(Float)
-    waterSun = Column(Integer)
-    waterMon = Column(Integer)
-    waterTue = Column(Integer)
-    waterWed = Column(Integer)
-    waterThu = Column(Integer)
-    waterFri = Column(Integer)
-    waterSat = Column(Integer)
-    pref_time_hrs = Column(String)
-    pref_time_min = Column(String)
     application_rate = Column(Float)
     emitter_efficiency = Column(Float)
     schedule = Column(PickleType)
@@ -179,8 +170,8 @@ class ZoneConfig(Base):
             new_auto_schedule = Schedule()
             
             for day in watering_days:
-                start_time_morning = datetime.time(8)
-                start_time_afternoon = datetime.time(15)
+                start_time_morning = time(8)
+                start_time_afternoon = time(15)
                 new_schedule_entry = ScheduleEntry(day, start_time_morning, watering_duration)
                 new_auto_schedule.append(new_schedule_entry)
                 new_schedule_entry = ScheduleEntry(day, start_time_afternoon, watering_duration)
@@ -188,6 +179,8 @@ class ZoneConfig(Base):
 
             self.schedule = new_auto_schedule
             print(f"new auto schedule set: {self.schedule}")
+        else:
+            print("not enough deficit - no watering schedule set")
         
 
         
@@ -246,9 +239,10 @@ class Schedule(List):
     def get_prev_entry():
         pass
 
-    def __repr__(self):
-        for entry_item in self:
-            return entry_item
+    # def __repr__(self):
+        
+    #     for entry_item in self:
+    #         return entry_item
 
 
 test_mode = 0
