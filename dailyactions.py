@@ -12,8 +12,9 @@ from crontab import CronTab
 from capstoneclient.models import SensorEntry, SystemConfig, ZoneConfig, HistoryItem
 from capstoneclient.db_manager import DBManager
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
-from capstoneclient.solar import solar_radiation_for_dates
-from capstoneclient.weather import get_weather_for_days
+
+
+
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
 LOG_FILE_NAME = './client_dev.log'
@@ -21,61 +22,7 @@ LOG_FILE_NAME = './client_dev.log'
 def isOnRaspi ():
     return os.path.exists("/sys/firmware/devicetree/base/model")
 
-def correct_missing_history_items(db, lat, long):
-    # check db for missing history data: up to 7 days
-    missing_history_dates_list = []
-    day_delta = timedelta(days = 1)
-    today = datetime.today()
-    for i in range(7):
-        date = (today - (i * day_delta)).date()
-        # check there's a history item for date
-        item = db.get(HistoryItem, date)
-        if not item:
-            missing_history_dates_list.append(date)
-    history_items_list = gethistoricaldata(missing_history_dates_list, lat=lat, long=long)
-    for item in history_items_list:
-        try:
-            db.add(item)
-        except Exception as e:
-            print("capstoneclient startup(): cant add history item to db (probably already there)")
-            db.my_session.rollback()
 
-    # check db for missing solar data: up to 7 days
-    missing_solar_dates_list = []
-    for i in range(7):
-        date = today - (i * day_delta)
-        # check there's a history item for date
-        solar = db.get_solar_for_date(date)
-        if not solar > 0:
-            missing_solar_dates_list.append(date)
-    complete_tup_list = solar_radiation_for_dates(missing_solar_dates_list, lat, long)
-    for tup in complete_tup_list:
-        result = db.get(HistoryItem, tup[0])
-        result.solar = tup[1]
-    db.commit()
-    num_corrections = len(missing_history_dates_list)+len(missing_solar_dates_list)
-    return num_corrections
-
-def gethistoricaldata(day_list: list, lat: float, long: float) -> list[HistoryItem]:
-    """Returns list of HistoryItems, one for each of days in list at given lat [Float], long [Float]."""
-
-    my_sys = db.get(SystemConfig, "system")
-    offset = my_sys.utc_offset
-
-    weather_tup_list = get_weather_for_days(day_list, lat, long, offset)
-    #solar_tup_list = solar_radiation_for_dates(day_list, lat, long)
-    
-    history_item_list = []
-    for day in day_list:
-        weather_tup = [tup for tup in weather_tup_list if day in tup][0]
-        #solar_tup = [tup for tup in solar_tup_list if day in tup]
-        item = HistoryItem()
-        item.populate_from_weather_item(weather_tup[1])
-        #item.solar = solar_tup[1]
-        item.solar = 1
-        item.calculate_et_and_water_deficit()
-        history_item_list.append(item)
-    return history_item_list
 
 def read_sensors():
     soil_moist = 0

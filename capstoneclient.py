@@ -16,13 +16,13 @@ from dailyactions import (
     ZONE_CONTROL_COMMENT_NAME,
     LOG_FILE_NAME,
     isOnRaspi,
-    correct_missing_history_items
+    #correct_missing_history_items
 )
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import HistoryItem, SystemConfig, ZoneConfig, ScheduleEntry, Schedule
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 from zone_control import open_all, close_all
-
+from capstoneclient.weather import get_weather_for_days
 DWDBG = False
 
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
@@ -48,6 +48,83 @@ if on_raspi:
 else:
     DWDBG = True
     input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
+
+def correct_missing_history_items(offset, lat, long):
+    # check db for missing history data: up to 7 days
+    missing_history_dates_list = []
+    day_delta = timedelta(days = 1)
+    today = datetime.today()
+    for i in range(7):
+        date = (today - (i * day_delta)).date()
+        # check there's a history item for date
+        item = db.get(HistoryItem, date)
+        if not item:
+            missing_history_dates_list.append(date)
+    print(f"missing these dates: {missing_history_dates_list}")
+    if missing_history_dates_list:
+        history_items_list = gethistoricaldata(offset, missing_history_dates_list, lat=lat, long=long)
+        for item in history_items_list:
+            try:
+                print(f"adding item {item} with this date: {item.date}")
+                db.add(item)
+            except Exception as e:
+                print("capstoneclient startup(): cant add history item to db (probably already there)")
+                db.my_session.rollback()
+
+    # check db for missing solar data: up to 7 days
+    missing_solar_dates_list = []
+    for i in range(7):
+        
+        date = (today - (i * day_delta)).date()
+        # check there's a history item for date
+        print(f"looking for solar data for date {date}")
+        solar = db.get_solar_for_date(date)
+        if not solar > 0:
+            missing_solar_dates_list.append(date)
+    if missing_solar_dates_list:
+        complete_tup_list = solar_radiation_for_dates(missing_solar_dates_list, lat, long)
+        for tup in complete_tup_list:
+            result = db.get(HistoryItem, tup[0])
+            result.solar = tup[1]
+        db.commit()
+    num_corrections = len(missing_history_dates_list)+len(missing_solar_dates_list)
+    print(f"num corrections = {num_corrections}")
+    return num_corrections
+
+
+def gethistoricaldata(offset, day_list: list, lat: float, long: float) -> list[HistoryItem]:
+    """Returns list of HistoryItems, one for each of days in list at given lat [Float], long [Float]."""
+
+    #my_sys = db.get(SystemConfig, "system")
+    #offset = my_sys.utc_offset
+
+    weather_list = get_weather_for_days(day_list, lat, long, offset)
+    print(f"weather tup list first item date= {weather_list[0].date}")
+    
+    print(f"weather tup list second item date= {weather_list[1].date}") # BAD
+    #solar_tup_list = solar_radiation_for_dates(day_list, lat, long)
+    
+    history_item_list = []
+    for day in day_list:
+        #weather_tup = [tup for tup in weather_tup_list if day in tup][0]
+        #match_index = next(i for i, (v, *_) in enumerate(weather_list) if v == day)
+        match = [x for x in weather_list if x.date == day]
+        
+        print(f"day is {day}. match length is {len(match)}")
+        #weather_tup = weather_list[match_index]
+        #print(f"weather tup is {weather_tup}, has item with date {weather_tup[1]}")  # BAD
+        weather_item = match[0]
+        print(f"weather item to use to populate: {weather_item.date}")  # Bad
+        #print(f"weather_tup = {weather_tup}")
+        #solar_tup = [tup for tup in solar_tup_list if day in tup]
+        item = HistoryItem()
+        item.populate_from_weather_item(weather_item)
+        #item.solar = solar_tup[1]
+        item.solar = 1
+        item.calculate_et_and_water_deficit()
+        history_item_list.append(item)
+        print(f"history_item_list adding this item {item} with this date {item.date}") # always adding same item
+    return history_item_list
 
 # op_menu() is the landing spot for operations.
 def op_menu():
@@ -241,7 +318,7 @@ def startup():
 
     # get historical weather / solar data, build database.
     # This does the past week as a starting point for a water deficit.
-    correct_missing_history_items()
+    correct_missing_history_items(my_sys.utc_offset, my_sys.lat, my_sys.long)
         
     print("Database of historical environmental data built.")
 

@@ -4,6 +4,10 @@ import json
 from datetime import date, datetime, time, timezone
 
 class WeatherDayItem:
+    
+    def __init__(self, date):
+        self.date = date
+        #print(f"---- new weather item created with date {self.date}")
     date: date
     windspeed: float
     pressure: float
@@ -13,24 +17,35 @@ class WeatherDayItem:
     precip: float
 
 def get_weather_for_days(days: list, lat: float, long: float, offset) -> list:
-    weather_tup_list = []
+    weather_list = []
     for day in days:
+        #item = WeatherDayItem()
         data = fetch_weather_data(day, lat, long, offset)
-        item = parseweather(data)
-        weather_tup = (day, item)
-        weather_tup_list.append(weather_tup)
-    return weather_tup_list
+        
+        item = parseweather(day, data)
+        #print(f"THIS ITEM CAME BACK FROM PARSEWEATHER, has date: {item.date}") # GOOD
+        x = weather_list.append(item)
+        #weather_tup_list.append(weather_tup)
+        #print(x)
+        #print(f"weather_tup_list from weather: appending weather tup with item with date = {item.date}") # GOOD
+        #for x in weather_list:
+            #print(f"all weather list items: {x} with date {x.date}")
+    #print(f"LAST TIME leaving WEATHER: weather tup list length = {len(weather_list)}")
+    #print(f"LAST TIME leaving WEATHER: weather tup list first item date = {weather_list[0].date}")
+    #print(f"LAST TIME leaving WEATHER: weather tup list 2nd item date = {weather_list[1].date}") # BAD
+    return weather_list
 
 
 
 
 def fetch_weather_data(date, lat, long, offset) -> json:
     
-    start = int(datetime.combine(date, offset).timestamp())
-    end = int(datetime.combine(date, offset).timestamp())
-    # end = int(datetime.combine(date, time.max).timestamp())
+    start = datetime.combine(date, time.min) + offset
+    start = int(start.timestamp())
+    end = datetime.combine(date, time.max) + offset
+    end = int(end.timestamp())
 
-    print(f"start time = {start}, end time = {end}")
+    #print(f"start time = {start}, end time = {end}. offset = {offset}")
 
     appid = "ae7cc145d2fea84bea47dbe1764f64c0"
 
@@ -40,78 +55,43 @@ def fetch_weather_data(date, lat, long, offset) -> json:
     response = requests.request("GET", url, headers=headers, data=payload)
     return json.loads(response.text)  # pulls weather data
 
-
-def parseweather(data: json): # -> list[HistoryItem]:
+def parseweather(day, data: json): # -> list[HistoryItem]:
     """Returns WeatherDayItem populated with weather data"""
     # weather_history_list = []
 
-    temp, dailydata = [], []
+    tot_wind, tot_press, tot_hum, tot_precip = 0, 0, 0, 0
+    temp_min = data['list'][0]['main']['temp_min']
+    temp_max = data['list'][0]['main']['temp_max']
+    
     for x in data['list']:
-        timestamp = datetime.fromtimestamp(int(x['dt'])).strftime('%Y%m%d%H')
-        date_pw = date.fromtimestamp(int(x['dt']))
-        windspeed = x['wind']['speed']
-        pressure = x['main']['pressure']
-        humidity = x['main']['humidity']
-        temp_min = x['main']['temp_min']
-        temp_max = x['main']['temp_max']
+        
+        tot_wind += x['wind']['speed']
+        tot_press += x['main']['pressure']
+        tot_hum += x['main']['humidity']
+        temp_min = min(temp_min, x['main']['temp_min']) 
+        temp_max = max(temp_max, x['main']['temp_max'])
         try:
-            precip = x['rain']['1h']
+            tot_precip += float(x['rain']['1h'])
         except:
-            precip = 0
-        entry = [timestamp, date_pw, windspeed, pressure, humidity, temp_min, temp_max, precip]
-        temp.append(entry)
-
-    # combines hourly data into min/max or avg daily values
-    avgwind, avgpres, avghum = float(temp[0][2]), float(temp[0][3]), float(temp[0][4])
-    temp_min, temp_max = float(temp[0][5]), float(temp[0][6])
-    try:
-        precip = float(temp[0][7])
-    except:
-        precip = 0
-    entrycounter = 1
-
-    for x in range(len(temp)):
-        try:
-            if x == (len(temp)-1):
-                entry = [temp[x][1], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
-                            temp_min-273.15, temp_max-273.15, precip / 25.4]
-                dailydata.append(entry)
-            elif temp[x][1] == temp[x+1][1]:
-                entrycounter += 1
-                avgwind += float(temp[x+1][2])
-                avgpres += float(temp[x+1][3])
-                avghum += float(temp[x+1][4])
-                temp_min = min(temp_min, float(temp[x][5]), float(temp[x+1][5]))
-                temp_max = max(temp_max, float(temp[x][6]), float(temp[x+1][6]))
-                try:
-                    precip += float(temp[x+1][7])
-                except:
-                    precip = 0
-            else:
-                entry = [temp[x][1], avgwind / entrycounter, avgpres / entrycounter, avghum / entrycounter,
-                            temp_min - 273.15, temp_max - 273.15, precip / 25.4]
-                dailydata.append(entry)
-                avgwind, avgpres, avghum = float(temp[x+1][2]), float(temp[x+1][3]), float(temp[x+1][4])
-                temp_min, temp_max = float(temp[x+1][5]), float(temp[x+1][6])
-                try:
-                    precip = float(temp[x+1][7])
-                except:
-                    precip = 0
-                entrycounter = 1
-        except:
-            print("Exception occurred while parsing historical weather data.")
             pass
 
-    for x in range(len(dailydata)):
-        new_day = WeatherDayItem
-        new_day.date = dailydata[x][0]
-        new_day.windspeed = dailydata[x][1]
-        new_day.pressure = dailydata[x][2]
-        new_day.humidity = dailydata[x][3]
-        new_day.temp_min = dailydata[x][4]
-        new_day.temp_max = dailydata[x][5]
-        new_day.precip = dailydata[x][6]
-        # weather_history_list.append(new_day)
+    ave_wind = float(tot_wind) / len(data['list'])
+    ave_press = float(tot_wind) / len(data['list']) 
+    ave_hum = float(tot_wind) / len(data['list']) 
+    temp_min = temp_min - 273.15
+    temp_max = temp_max - 273.15
+    tot_precip = tot_precip / 25.4
+
+    new_day = WeatherDayItem(day)
+    #new_day.date = day
+    new_day.windspeed = ave_wind
+    new_day.pressure = ave_press
+    new_day.humidity = ave_hum
+    new_day.temp_min = temp_min
+    new_day.temp_max = temp_max
+    new_day.precip = tot_precip
+    
+    #print(f"new day date is {new_day.date}")
 
     return new_day
 

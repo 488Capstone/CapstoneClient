@@ -11,8 +11,6 @@ from capstoneclient.models import HistoryItem
 
 class DBManager:
 
-
-
     def __init__(self):
         clientDir = os.getenv('SIOclientDir')
         if clientDir is not None:
