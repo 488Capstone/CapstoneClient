@@ -7,7 +7,7 @@
 import os
 import re
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 import requests
 from crontab import CronTab
@@ -168,7 +168,7 @@ def my_system():
         return
     else:
         userInput = input("Edit auto/man, enabled zones, and schedule from Schedule menu item. Enter valid zip or anything else to continue")
-        if not re.fullmatch(r"\d{6}", userInput):
+        if not re.fullmatch(r"\d{5}", userInput):
             return
         else:
             my_sys.zipcode = userInput
@@ -190,21 +190,22 @@ def my_schedule():
             for item in mylist:
 
                 item_split = item.split(' ')  # split day from times
+                
                 day_num = day_dict.get(item_split[0])  
 
                 start_time = 0
 
                 time_list = item_split[1].split('-')  # split to and from times
                 if ':' not in time_list[0]:  # no minutes
-                    start_datetime = datetime.datetime.strptime(time_list[0]+':00', '%H:%M')  # add minutes and make datetime
-                    start_time = datetime.time(start_datetime)
+                    start_datetime = datetime.strptime(time_list[0]+':00', '%H:%M')  # add minutes and make datetime
+                    start_time = start_datetime.time()
                 else:
-                    start_datetime = datetime.datetime.strptime(time_list[0], '%H:%M')  # make datetime
-                    start_time = datetime.time(start_datetime.hour, start_datetime.minute)
+                    start_datetime = datetime.strptime(time_list[0], '%H:%M')  # make datetime
+                    start_time = time(start_datetime.hour, start_datetime.minute)
                 if ':' not in time_list[1]:  # no minutes
-                    finish_datetime = datetime.datetime.strptime(time_list[1]+':00', '%H:%M')  # add minutes and make datetime
+                    finish_datetime = datetime.strptime(time_list[1]+':00', '%H:%M')  # add minutes and make datetime
                 else:
-                    finish_datetime = datetime.datetime.strptime(time_list[1], '%H:%M')  # make datetime
+                    finish_datetime = datetime.strptime(time_list[1], '%H:%M')  # make datetime
 
                 duration_delta = (finish_datetime - start_datetime)
                 duration = int(duration_delta.total_seconds() // 60)
@@ -213,7 +214,7 @@ def my_schedule():
                 schedule.append(schedule_item)
 
         except Exception as e:
-            print("Cannot parse: {e}")
+            print("Cannot parse")
         
         if schedule:
             if zone_num != 0:

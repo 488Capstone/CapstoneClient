@@ -1,6 +1,6 @@
 import requests
 import json
-from datetime import datetime, time
+from datetime import datetime, time, date
 
 class WeatherDayItem:
     
