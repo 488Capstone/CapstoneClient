@@ -187,6 +187,7 @@ class ZoneConfig(Base):
                 new_auto_schedule.append(new_schedule_entry)
 
             self.schedule = new_auto_schedule
+            print(f"new auto schedule set: {self.schedule}")
         
 
         
@@ -244,6 +245,10 @@ class Schedule(List):
 
     def get_prev_entry():
         pass
+
+    def __repr__(self):
+        for entry_item in self:
+            return entry_item
 
 
 test_mode = 0

@@ -23,6 +23,7 @@ from capstoneclient.models import HistoryItem, SystemConfig, ZoneConfig, Schedul
 from capstoneclient.sensors import read_baro_sensor, read_soil_sensor
 from zone_control import open_all, close_all
 from capstoneclient.weather import get_weather_for_days
+from capstoneclient.solar import solar_radiation_for_dates
 DWDBG = False
 
 # controls imports that only work on raspberry pi. This allows code to stay functional for development on other systems.
@@ -50,11 +51,11 @@ else:
     input("not on raspi; functionality will be incomplete. Press enter to acknowledge.")
 
 def correct_missing_history_items(offset, lat, long):
-    # check db for missing history data: up to 7 days
+    # check db for missing history data: up to 7 days, not including today
     missing_history_dates_list = []
     day_delta = timedelta(days = 1)
     today = datetime.today()
-    for i in range(7):
+    for i in range(1, 8):
         date = (today - (i * day_delta)).date()
         # check there's a history item for date
         item = db.get(HistoryItem, date)
@@ -73,11 +74,11 @@ def correct_missing_history_items(offset, lat, long):
 
     # check db for missing solar data: up to 7 days
     missing_solar_dates_list = []
-    for i in range(7):
+    for i in range(1, 8):
         
         date = (today - (i * day_delta)).date()
         # check there's a history item for date
-        print(f"looking for solar data for date {date}")
+        # print(f"looking for solar data for date {date}")
         solar = db.get_solar_for_date(date)
         if not solar > 0:
             missing_solar_dates_list.append(date)
@@ -99,9 +100,9 @@ def gethistoricaldata(offset, day_list: list, lat: float, long: float) -> list[H
     #offset = my_sys.utc_offset
 
     weather_list = get_weather_for_days(day_list, lat, long, offset)
-    print(f"weather tup list first item date= {weather_list[0].date}")
+    #print(f"weather tup list first item date= {weather_list[0].date}")
     
-    print(f"weather tup list second item date= {weather_list[1].date}") # BAD
+    #print(f"weather tup list second item date= {weather_list[1].date}") # BAD
     #solar_tup_list = solar_radiation_for_dates(day_list, lat, long)
     
     history_item_list = []
@@ -110,11 +111,11 @@ def gethistoricaldata(offset, day_list: list, lat: float, long: float) -> list[H
         #match_index = next(i for i, (v, *_) in enumerate(weather_list) if v == day)
         match = [x for x in weather_list if x.date == day]
         
-        print(f"day is {day}. match length is {len(match)}")
+        #print(f"day is {day}. match length is {len(match)}")
         #weather_tup = weather_list[match_index]
         #print(f"weather tup is {weather_tup}, has item with date {weather_tup[1]}")  # BAD
         weather_item = match[0]
-        print(f"weather item to use to populate: {weather_item.date}")  # Bad
+        #print(f"weather item to use to populate: {weather_item.date}")  # Bad
         #print(f"weather_tup = {weather_tup}")
         #solar_tup = [tup for tup in solar_tup_list if day in tup]
         item = HistoryItem()
@@ -123,7 +124,7 @@ def gethistoricaldata(offset, day_list: list, lat: float, long: float) -> list[H
         item.solar = 1
         item.calculate_et_and_water_deficit()
         history_item_list.append(item)
-        print(f"history_item_list adding this item {item} with this date {item.date}") # always adding same item
+        #print(f"history_item_list adding this item {item} with this date {item.date}") # always adding same item
     return history_item_list
 
 # op_menu() is the landing spot for operations.
@@ -319,6 +320,10 @@ def startup():
     # get historical weather / solar data, build database.
     # This does the past week as a starting point for a water deficit.
     correct_missing_history_items(my_sys.utc_offset, my_sys.lat, my_sys.long)
+
+ 
+
+
         
     print("Database of historical environmental data built.")
 
@@ -347,23 +352,24 @@ def startup():
             print("We'll make it easy and pick Wednesday for now.")
         # TODO: look into these
         current_zone.application_rate = 1.5
-        current_zone.emmitter_efficiency = 0.7
+        current_zone.emitter_efficiency = 0.7
         # current_zone.pref_time_hrs = "09"
         # current_zone.pref_time_min = "00"
         db.commit()
 
-        print("Okay, it looks like we have everything we need to calculate your water needs. We'll do that now.")  
+    print("Okay, it looks like we have everything we need to calculate your water needs. We'll do that now.")  
 
-        # TECHNICAL DEBT - how much did you water your lawn over the past week?
-        # TODO: this duplicated in dailyactions
-        rolling_water_deficit = db.get_previous_week_water_deficit()
-        print(f"Judging by the past week, you have a total water deficit of {rolling_water_deficit} inches.")
+    # TECHNICAL DEBT - how much did you water your lawn over the past week?
+    # TODO: this duplicated in dailyactions
+    rolling_water_deficit = db.get_previous_week_water_deficit()
+    print(f"Judging by the past week, you have a total water deficit of {rolling_water_deficit} inches.")
         
-        # update auto schedule for each zone based on new daily data
-        for zone_num in my_sys.zones_enabled:
-            current_zone = zone_list[zone_num - 1]
-            current_zone.water_algo(rolling_water_deficit)
-        print("Beep...Bop...Boop...")
+    # update auto schedule for each zone based on new daily data
+    for zone_num in my_sys.zones_enabled:
+        
+        current_zone = zone_list[zone_num - 1]
+        current_zone.water_algo(rolling_water_deficit)
+    print("Beep...Bop...Boop...")
     
 
     print("Creating recurring tasks...")

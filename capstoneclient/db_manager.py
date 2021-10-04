@@ -88,8 +88,8 @@ class DBManager:
         
     
     def get_previous_week_water_deficit(self):
-        one_week_ago_dt = datetime.date.today() - datetime.timedelta(days = 7)
-        one_week_ago_date = one_week_ago_dt.date()
+        one_week_ago_date = datetime.date.today() - datetime.timedelta(days = 7)
+        #one_week_ago_date = one_week_ago_dt.date()
         result = self.my_session.query(HistoryItem).filter(HistoryItem.date >= one_week_ago_date)
         w_d = 0
         for row in result:
