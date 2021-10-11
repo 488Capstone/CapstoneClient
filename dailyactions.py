@@ -540,7 +540,8 @@ if __name__ == "__main__":
     elif choice == "STARTUP":
         if on_raspi:
             from capstoneclient.gpio_control import *
-            raspi_startup()
+            #DW 2021-10-11-11:48 just stop this for now...
+            #raspi_startup()
     elif choice == "SET_STARTUP_CRON":
         #print("{}---DEV: test ".format(str(datetime.now())))
         if on_raspi:

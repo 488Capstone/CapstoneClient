@@ -68,7 +68,8 @@ def write_pin(pin, value):
 
 def cleanup():
     #print(f"Cleaning up GPIO setup on Exit")
-    GPIO.cleanup()
+    #GPIO.cleanup()
+    pass
 
 def setup_gpio(setDefaultStates=False, verbose=False):
     global GPIO_SETUP_DONE
