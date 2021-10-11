@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 # todo: scheduler to reqs
+import time
 import RPi.GPIO as GPIO
 from datetime import datetime, timedelta
 import sys
@@ -35,6 +36,9 @@ def set_valve(zn, open_bool):
     channel = zone_lookup[zn-1]
     #DW 2021-10-11-09:50 need to now turn on/off the 9V supply before any zone actions
     ioc.write_pin("shutdown", 0)
+    #DW 2021-10-11-10:22 the zone enables are no longer working. Maybe not enough
+    # time to pull up the 9V supple? Let's try waiting a little
+    time.sleep(1)
     #TODO DW 2021-10-11-10:06 what happens when we're looping through all zones? 
     #   Do we really want to enable/disable the 9V supply EVERY time? consider adding
     #   feature that will just leave 9V on until all valve control is done.
