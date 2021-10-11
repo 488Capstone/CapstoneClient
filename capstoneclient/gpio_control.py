@@ -36,8 +36,8 @@ def state_gpio(val):
 
 def read_pin(name):
     #print(f"read_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
-    if not GPIO_SETUP_DONE:
-        setup_gpio()
+#    if not GPIO_SETUP_DONE:
+#        setup_gpio()
     pinnum = get_pin(pin)
     if pinnum is not None:
         return GPIO.input(pinnum)
@@ -58,8 +58,8 @@ def get_pin(pin):
 # name corresponds to the pin name from our pcb schematic, value is True or False
 def write_pin(pin, value):
     #print(f"write_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
-    if not GPIO_SETUP_DONE:
-        setup_gpio()
+#    if not GPIO_SETUP_DONE:
+#        setup_gpio()
     pinnum = get_pin(pin)
     pinval = state_gpio(value)
     if pinnum is not None and pinval is not None:
