@@ -42,7 +42,7 @@ def get_pin(pin):
             pinnum = pin
     elif isinstance(pin, str):
         if pin in RASPI_PIN.keys():
-            pinnum = RASPI_PIN[name]
+            pinnum = RASPI_PIN[pin]
     if pinnum is None:
         print(f"{pin} not found in {RASPI_PIN}")
     return pinnum
