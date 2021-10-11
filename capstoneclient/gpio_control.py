@@ -28,6 +28,7 @@ def state_gpio(val):
         return None
 
 def read_pin(name):
+    print(f"read_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
     if not GPIO_SETUP_DONE:
         setup_gpio()
     pinnum = get_pin(pin)
@@ -49,6 +50,7 @@ def get_pin(pin):
 
 # name corresponds to the pin name from our pcb schematic, value is True or False
 def write_pin(pin, value):
+    print(f"write_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
     if not GPIO_SETUP_DONE:
         setup_gpio()
     pinnum = get_pin(pin)
@@ -58,6 +60,7 @@ def write_pin(pin, value):
 
 def setup_gpio(setDefaultStates=False, verbose=False):
     global GPIO_SETUP_DONE
+    print(f"setup_gpio GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
     #DW only do the setup once per python session
     if not GPIO_SETUP_DONE:
         #DW 2021-10-11-08:05 'ps_shutoff' will turn off the power path from the wall adapter power supply
@@ -95,6 +98,7 @@ def setup_gpio(setDefaultStates=False, verbose=False):
                 pinnum = RASPI_PIN[key]
                 GPIO.setup(pinnum, GPIO.IN)
         GPIO_SETUP_DONE = True
+        print(f"setup_gpio end GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
         #DW 2021-10-03-13:30 no longer needed
         #GPIO.setmode(prior_pinmode)
 
