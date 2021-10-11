@@ -1,8 +1,10 @@
 # DW 2021-10-03-12:21 This file is meant to handle some of the GPIO setup
 # at this point it's particularly meant to handle the gpio states at raspi initial power up
-import time
+#import time
 import RPi.GPIO as GPIO
-from capstoneclient.raspi_pins import RASPI_PIN
+from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
+
+GPIO_SETUP_DONE = False
 
 def state_str(boolval):
     if boolval: return "HI"
@@ -11,23 +13,42 @@ def state_gpio(boolval):
     if boolval: return GPIO.HIGH
     else:       return GPIO.LOW
 
-def setup_gpio(setDefaultStates=False):
+def read_pin(name):
+    if not GPIO_SETUP_DONE:
+        setup_gpio()
+    pinnum = get_pin(pin)
+    if pinnum is not None:
+        return GPIO.input(pinnum)
+
+# take the pin num/name and confirm it's in our BCM pin list otherwise return None
+def get_pin(pin):
+    pinnum = None
+    if isinstance(pin, int):
+        if pin in RASPI_PIN.values():
+            pinnum = pin
+    elif isinstance(pin, str):
+        if pin in RASPI_PIN.keys():
+            pinnum = RASPI_PIN[name]
+    if pinnum is None:
+        print(f"{pin} not found in {RASPI_PIN}")
+    return pinnum
+
+# name corresponds to the pin name from our pcb schematic, value is True or False
+def write_pin(pin, value):
+    if not GPIO_SETUP_DONE:
+        setup_gpio()
+    pinnum = get_pin(pin)
+    if pinnum is not None:
+        return GPIO.output(pinnum, state_gpio(value))
+
+def setup_gpio(setDefaultStates=False, verbose=False):
     #DW 2021-10-11-08:05 'ps_shutoff' will turn off the power path from the wall adapter power supply
     #to the MPPT Vsup_in (VDC_IN/VIN), which will turn off both the 5V & 9V rails
     #'shutdown' will turn off the 9V alone
     #DW 2021-10-11-08:08 to save power, lets try enabling the 9V solenoid supply on demand
     #               So we'll turn 9V on, drive H-bridge, then turn 9V off
-    pinstate = {
-            "polarity":False,
-            "shutdown":True,
-            "ps_shutoff":False,
-            "valve1_enable":False,
-            "valve2_enable":False,
-            "valve3_enable":False,
-            "valve4_enable":False,
-            "valve5_enable":False,
-            "valve6_enable":False
-            }
+    pinstate = RASPI_OUTPUTS
+
     #DW 2021-10-03-13:29 turns out there's no reason to store the old mode
     # the gpio code ONLY allows one mode...
     #prior_pinmode = GPIO.getmode()
@@ -38,7 +59,8 @@ def setup_gpio(setDefaultStates=False):
     outputpin_names = pinstate.keys()
     for key in outputpin_names:
         value = pinstate[key]
-        print(f"OUTPUT {key}:{state_str(value)}")
+        if verbose:
+            print(f"OUTPUT {key}:{state_str(value)}")
         pinnum = RASPI_PIN[key]
         if setDefaultStates:
             #TODO DW 2021-10-11-08:40 does initial state write that state now? Or is it just
@@ -50,12 +72,19 @@ def setup_gpio(setDefaultStates=False):
     #TODO DW 2021-10-03-12:20 should we apply some default pull ups/downs to the inputs?
     for key in RASPI_PIN.keys():
         if key not in outputpin_names:
-            print(f"INPUT {key}")
+            if verbose:
+                print(f"INPUT {key}")
             pinnum = RASPI_PIN[key]
             GPIO.setup(pinnum, GPIO.IN)
-
+    GPIO_SETUP_DONE = True
     #DW 2021-10-03-13:30 no longer needed
     #GPIO.setmode(prior_pinmode)
+
 def raspi_startup():
     # run the setup gpio func and have it set the default startup state of the outputs
-    setup_gpio(True)
+    setup_gpio(True, True)
+
+#DW 2021-10-11-09:05 for now, lets initialize the gpio any time this file is called
+#   rather than having to call gpio_control.setup_gpio() EVERY time
+#   If this becomes inefficient in the future, change it.
+setup_gpio(False, False)

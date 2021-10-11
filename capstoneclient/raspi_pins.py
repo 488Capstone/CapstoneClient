@@ -15,6 +15,19 @@ RASPI_PIN = {
     "stat2":22,
         }
 
+#DW 2021-10-11-09:03 these are the output pins and their corresponding default start up states
+RASPI_OUTPUTS = {
+            "polarity":False,
+            "shutdown":True,
+            "ps_shutoff":False,
+            "valve1_enable":False,
+            "valve2_enable":False,
+            "valve3_enable":False,
+            "valve4_enable":False,
+            "valve5_enable":False,
+            "valve6_enable":False
+            }
+
 # DW 2021-10-03-14:19 everything below here was set up for GPIO.BOARD mode and is no longer valid
 #RASPI_PIN_NAMES = ["3v3",
 #"5v_1",

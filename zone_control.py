@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import sys
 import schedule
 from capstoneclient.raspi_pins import RASPI_PIN
+import capstoneclient.gpio_control as ioc
 
 # zone 1: GPIO19, zone 2: GPIO26, zone 3: GPIO18, zone 4: GPIO23, zone 5: GPIO24, zone 6: GPIO25
 zone_lookup = (
@@ -19,19 +20,21 @@ zone_lookup = (
 POLARITY = RASPI_PIN["polarity"]
 
 def pulse_zone(zonepin):
-    GPIO.setmode(GPIO.BCM)
+    #GPIO.setmode(GPIO.BCM)
     #DW 2021-10-03-16:29 every time the python code runs we need to re-set up the gpio's
-    GPIO.setup(zonepin, GPIO.OUT)
+    #GPIO.setup(zonepin, GPIO.OUT)
     ENABLE_TIME = 40e-3 # seconds, needs to be fast, otherwise we just dump current like crazy
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
-    GPIO.output(zonepin, GPIO.HIGH)
+    ioc.write_pin(zonepin, True)
+    #GPIO.output(zonepin, GPIO.HIGH)
     while ((datetime.now() - start_time) < timelimit):
         pass
-    GPIO.output(zonepin, GPIO.LOW)
+    #GPIO.output(zonepin, GPIO.LOW)
+    ioc.write_pin(zonepin, False)
     now_time = datetime.now()
     total_on_dur_sec = (now_time - start_time).total_seconds()
-    print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}), pulsed ON time = {total_on_dur_sec} sec")
+    print(f"{now_time}---zone_control.py:: solenoid pulsed ON time = {total_on_dur_sec} sec")
 
 def set_valve(zn, open_bool):
     channel = zone_lookup[zn-1]

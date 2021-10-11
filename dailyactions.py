@@ -581,7 +581,7 @@ if __name__ == "__main__":
     elif choice == "DEV_VC":
         import zone_control 
         zone_control.close_valve(1)
-    elif choice == "DEV_RDGPIO":
+    elif choice == "DEV_RDGPIO": #Test if zone1 can be read like any other BCM pin - result: Yes
         import capstoneclient.gpio_control as gc
         import zone_control 
         import RPi.GPIO as GPIO
