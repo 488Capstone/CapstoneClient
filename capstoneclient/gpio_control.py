@@ -57,6 +57,7 @@ def write_pin(pin, value):
         return GPIO.output(pinnum, pinval)
 
 def setup_gpio(setDefaultStates=False, verbose=False):
+    global GPIO_SETUP_DONE
     #DW only do the setup once per python session
     if not GPIO_SETUP_DONE:
         #DW 2021-10-11-08:05 'ps_shutoff' will turn off the power path from the wall adapter power supply
