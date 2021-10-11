@@ -3,6 +3,7 @@
 #import time
 import RPi.GPIO as GPIO
 from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
+import atexit #DW to cleanup the gpio stuff when python3 exits
 
 GPIO_SETUP_DONE = False
 
@@ -58,6 +59,10 @@ def write_pin(pin, value):
     if pinnum is not None and pinval is not None:
         return GPIO.output(pinnum, pinval)
 
+def cleanup():
+    print(f"Cleaning up GPIO setup on Exit")
+    GPIO.cleanup()
+
 def setup_gpio(setDefaultStates=False, verbose=False):
     global GPIO_SETUP_DONE
     print(f"setup_gpio GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
@@ -111,3 +116,7 @@ def raspi_startup():
 #   rather than having to call gpio_control.setup_gpio() EVERY time
 #   If this becomes inefficient in the future, change it.
 setup_gpio(False, False)
+
+#DW 2021-10-11-10:42 register the cleanup function to be called when we exit python session
+atexit.register(cleanup)
+
