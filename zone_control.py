@@ -29,6 +29,9 @@ def pulse_zone(zonepin):
     while ((datetime.now() - start_time) < timelimit):
         pass
     GPIO.output(zonepin, GPIO.LOW)
+    now_time = datetime.now()
+    total_on_dur_sec = (now_time - start_time).total_seconds()
+    print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}), pulsed ON time = {total_on_dur_sec} sec")
 
 def set_valve(zn, open_bool):
     channel = zone_lookup[zn-1]
@@ -92,6 +95,7 @@ def cleanup():
 
 test_mode = False
 
+#TODO DW 2021-10-11-07:55 it might be nice to have a toggle option for us during debug, if duration=0 just toggle
 
 # todo take list of zones, durations via CLI
 # for direct call to this file:
@@ -114,7 +118,6 @@ if __name__ == "__main__" and not test_mode:
 
         elif on_off == 'off':
             close_valve(zone)
-
         else:
             open_valve_for(zone, duration)
             while schedule.get_jobs():

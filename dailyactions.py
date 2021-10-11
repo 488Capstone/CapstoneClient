@@ -581,5 +581,9 @@ if __name__ == "__main__":
     elif choice == "DEV_VC":
         import zone_control 
         zone_control.close_valve(1)
+    elif choice == "DEV_RDGPIO":
+        import zone_control 
+        zone1Val = GPIO.input(7)
+        print(f"{datetime.now()}---{choice}: zone1 value = {repr(zone1Val)}")
     else:
         print("{}---INPUT PARAM CHOICE NOT RECOGNIZED: '{choice}'".format(str(datetime.now())))

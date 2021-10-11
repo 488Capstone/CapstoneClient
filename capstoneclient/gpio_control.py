@@ -12,9 +12,14 @@ def state_gpio(boolval):
     else:       return GPIO.LOW
 
 def raspi_startup():
+    #DW 2021-10-11-08:05 'ps_shutoff' will turn off the power path from the wall adapter power supply
+    #to the MPPT Vsup_in (VDC_IN/VIN), which will turn off both the 5V & 9V rails
+    #'shutdown' will turn off the 9V alone
+    #DW 2021-10-11-08:08 to save power, lets try enabling the 9V solenoid supply on demand
+    #               So we'll turn 9V on, drive H-bridge, then turn 9V off
     pinstate = {
             "polarity":False,
-            "shutdown":False,
+            "shutdown":True,
             "ps_shutoff":False,
             "valve1_enable":False,
             "valve2_enable":False,
