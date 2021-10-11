@@ -64,6 +64,7 @@ def write_pin(pin, value):
     pinnum = get_pin(pin)
     pinval = state_gpio(value)
     if pinnum is not None and pinval is not None:
+        GPIO.setup(pinnum, GPIO.OUT)
         return GPIO.output(pinnum, pinval)
 
 def cleanup():
@@ -124,7 +125,7 @@ def raspi_startup():
 #   If this becomes inefficient in the future, change it.
 #DW 2021-10-11-11:24 we want the gpio outputs to remain driven, for example 'shutdown' should remain 
 #   high until we want to execute a valve (on/off).
-setup_gpio(False, False)
+#setup_gpio(False, False)
 
 #DW 2021-10-11-10:42 register the cleanup function to be called when we exit python session
 #atexit.register(cleanup)
