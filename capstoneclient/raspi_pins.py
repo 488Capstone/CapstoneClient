@@ -1,6 +1,6 @@
 # DW 2021-10-03-13:54 it appears the RPi library, or board library forces us to use BCM gpio values... bah!
 
-#DW 2021-10-11-11:32 DO NOT SET THESE IN HERE!!!!! I MADE A MISTAKE!!
+#DW 2021-10-11-11:32 DO NOT SET THESE IN HERE!!!!! I MADE A MISTAKE!! AAAAAH!
 #    "sda":2,
 #    "scl":3,
 #    "debug_tx":14,
