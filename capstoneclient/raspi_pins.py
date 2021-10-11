@@ -1,7 +1,7 @@
 # DW 2021-10-03-13:54 it appears the RPi library, or board library forces us to use BCM gpio values... bah!
 
 RASPI_PIN = {
-    "zone1":7
+    "zone1":7,
     "valve1_enable":19,
     "valve2_enable":26,
     "valve3_enable":18,
