@@ -38,7 +38,7 @@ def set_valve(zn, open_bool):
     ioc.write_pin("shutdown", 0)
     #DW 2021-10-11-10:22 the zone enables are no longer working. Maybe not enough
     # time to pull up the 9V supple? Let's try waiting a little
-    time.sleep(2)
+    time.sleep(1)
     #TODO DW 2021-10-11-10:06 what happens when we're looping through all zones? 
     #   Do we really want to enable/disable the 9V supply EVERY time? consider adding
     #   feature that will just leave 9V on until all valve control is done.
@@ -86,7 +86,9 @@ def open_valve_for(zn: int, dur):
     schedule.every(dur).minutes.do(close_valve, zn=zn)
 
 def cleanup():
-    GPIO.cleanup()
+    #DW 2021-10-11-11:29 we don't want the outputs to be floating. So no cleanups for now.
+    #GPIO.cleanup()
+    pass
 
 test_mode = False
 
@@ -129,6 +131,6 @@ if test_mode:
     open_valve_for(1, 0.1)
     while schedule.get_jobs():
         schedule.run_pending()
-    cleanup()  # cleanup turns everything to input
+    #cleanup()  # cleanup turns everything to input
 
 #sys.exit()
