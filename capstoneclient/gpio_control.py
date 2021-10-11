@@ -8,6 +8,7 @@ from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
 #import atexit #DW to cleanup the gpio stuff when python3 exits
 
 GPIO_SETUP_DONE = False
+GPIO.setmode(GPIO.BCM)
 
 #TODO DW 2021-10-11-10:44 decision: Do we want to initialize all gpio at bootup and never again, or every time this file is called?
 #   I will need to think on this for awhile. I guess for now we'll load/unload every time python is instantiated
@@ -87,7 +88,6 @@ def setup_gpio(setDefaultStates=False, verbose=False):
 
         #DW 2021-10-03-13:30 is there any point to setting this since something
         # is already doing it in our imports? who knows... let's just keep just incase
-        GPIO.setmode(GPIO.BCM)
         outputpin_names = pinstate.keys()
         for key in outputpin_names:
             value = pinstate[key]
