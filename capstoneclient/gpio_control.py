@@ -17,18 +17,17 @@ def setup_gpio(setDefaultStates=False):
     #'shutdown' will turn off the 9V alone
     #DW 2021-10-11-08:08 to save power, lets try enabling the 9V solenoid supply on demand
     #               So we'll turn 9V on, drive H-bridge, then turn 9V off
-    if setDefaultStates:
-        pinstate = {
-                "polarity":False,
-                "shutdown":True,
-                "ps_shutoff":False,
-                "valve1_enable":False,
-                "valve2_enable":False,
-                "valve3_enable":False,
-                "valve4_enable":False,
-                "valve5_enable":False,
-                "valve6_enable":False
-                }
+    pinstate = {
+            "polarity":False,
+            "shutdown":True,
+            "ps_shutoff":False,
+            "valve1_enable":False,
+            "valve2_enable":False,
+            "valve3_enable":False,
+            "valve4_enable":False,
+            "valve5_enable":False,
+            "valve6_enable":False
+            }
     #DW 2021-10-03-13:29 turns out there's no reason to store the old mode
     # the gpio code ONLY allows one mode...
     #prior_pinmode = GPIO.getmode()
@@ -42,6 +41,8 @@ def setup_gpio(setDefaultStates=False):
         print(f"OUTPUT {key}:{state_str(value)}")
         pinnum = RASPI_PIN[key]
         if setDefaultStates:
+            #TODO DW 2021-10-11-08:40 does initial state write that state now? Or is it just
+            #   an info type variable?
             GPIO.setup(pinnum, GPIO.OUT, initial=state_gpio(value))
         else:
             GPIO.setup(pinnum, GPIO.OUT)
