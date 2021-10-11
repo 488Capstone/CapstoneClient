@@ -1,7 +1,21 @@
 # DW 2021-10-03-13:54 it appears the RPi library, or board library forces us to use BCM gpio values... bah!
 
 RASPI_PIN = {
+    "sda":2,
+    "scl":3,
+    "debug_tx":14,
+    "debug_rx":15,
+    "emergency":8,
+    "rdy1":9,
+    "rdy2":11,
+    "rdy3":0,
+    "rdy4":1,
     "zone1":7,
+    "zone2":12,
+    "zone3":16,
+    "zone4":20,
+    "zone5":21,
+    "zone6":10,
     "valve1_enable":19,
     "valve2_enable":26,
     "valve3_enable":18,
@@ -12,7 +26,7 @@ RASPI_PIN = {
     "shutdown":6,
     "ps_shutoff":13,
     "stat1":27,
-    "stat2":22,
+    "stat2":22
         }
 
 #DW 2021-10-11-09:03 these are the output pins and their corresponding default start up states
