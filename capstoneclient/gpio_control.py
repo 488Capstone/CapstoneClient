@@ -8,6 +8,7 @@ from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
 #import atexit #DW to cleanup the gpio stuff when python3 exits
 
 GPIO_SETUP_DONE = False
+
 GPIO.setmode(GPIO.BCM)
 #DW 2021-10-11-12:16 normally I'd want to keep warnings. BUT, if we don't cleanup() (float all pins)
 #   then RPi will report a warning everytime we set a pin to output.
@@ -43,8 +44,8 @@ def state_gpio(val):
 
 def read_pin(name):
     #print(f"read_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
-    if not GPIO_SETUP_DONE:
-        setup_gpio()
+#    if not GPIO_SETUP_DONE:
+#        setup_gpio()
     pinnum = get_pin(pin)
     if pinnum is not None:
         return GPIO.input(pinnum)
@@ -65,8 +66,8 @@ def get_pin(pin):
 # name corresponds to the pin name from our pcb schematic, value is True or False
 def write_pin(pin, value):
     #print(f"write_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
-    if not GPIO_SETUP_DONE:
-        setup_gpio()
+#    if not GPIO_SETUP_DONE:
+#        setup_gpio()
     pinnum = get_pin(pin)
     pinval = state_gpio(value)
     if pinnum is not None and pinval is not None:
@@ -116,7 +117,7 @@ def setup_gpio(setDefaultStates=False, verbose=False):
                     print(f"INPUT {key}")
                 pinnum = RASPI_PIN[key]
                 GPIO.setup(pinnum, GPIO.IN)
-        GPIO_SETUP_DONE = True
+        #GPIO_SETUP_DONE = True
         #print(f"setup_gpio end GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
         #DW 2021-10-03-13:30 no longer needed
         #GPIO.setmode(prior_pinmode)
