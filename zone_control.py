@@ -26,12 +26,12 @@ def pulse_zone(zonepin):
     ENABLE_TIME = 40e-3 # seconds, needs to be fast, otherwise we just dump current like crazy
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
-    ioc.write_pin(zonepin, True)
+    ioc.write_pin(zonepin, 1)
     #GPIO.output(zonepin, GPIO.HIGH)
     while ((datetime.now() - start_time) < timelimit):
         pass
     #GPIO.output(zonepin, GPIO.LOW)
-    ioc.write_pin(zonepin, False)
+    ioc.write_pin(zonepin, 0)
     now_time = datetime.now()
     total_on_dur_sec = (now_time - start_time).total_seconds()
     print(f"{now_time}---zone_control.py:: solenoid pulsed ON time = {total_on_dur_sec} sec")

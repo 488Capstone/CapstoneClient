@@ -6,12 +6,26 @@ from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
 
 GPIO_SETUP_DONE = False
 
-def state_str(boolval):
-    if boolval: return "HI"
-    else:       return "LO"
-def state_gpio(boolval):
-    if boolval: return GPIO.HIGH
-    else:       return GPIO.LOW
+def state_str(val):
+    if isinstance(val, bool):
+        if val: return "HI"
+        else:       return "LO"
+    if isinstance(val, int):
+        if val>0: return "HI"
+        else:       return "LO"
+    else:
+        return "UNKNOWN"
+
+#DW 2021-10-11-09:35 mapping function, maps True/1 to GPIO.HIGH and False/0 to GPIO.LOW
+def state_gpio(val):
+    if isinstance(val, bool):
+        if val: return GPIO.HIGH
+        else:       return GPIO.LOW
+    if isinstance(val, int):
+        if val>0: return GPIO.HIGH
+        else:       return GPIO.LOW
+    else:
+        return None
 
 def read_pin(name):
     if not GPIO_SETUP_DONE:
@@ -38,8 +52,9 @@ def write_pin(pin, value):
     if not GPIO_SETUP_DONE:
         setup_gpio()
     pinnum = get_pin(pin)
-    if pinnum is not None:
-        return GPIO.output(pinnum, state_gpio(value))
+    pinval = state_gpio(value)
+    if pinnum is not None and pinval is not None:
+        return GPIO.output(pinnum, pinval)
 
 def setup_gpio(setDefaultStates=False, verbose=False):
     #DW 2021-10-11-08:05 'ps_shutoff' will turn off the power path from the wall adapter power supply
