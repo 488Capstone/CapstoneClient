@@ -99,6 +99,7 @@ def raspi_startup():
     # run the setup gpio func and have it set the default startup state of the outputs
     setup_gpio(True, True)
 
+#DW 2021-10-03-16:29 every time the python code runs we need to re-set up the gpio's
 #DW 2021-10-11-09:05 for now, lets initialize the gpio any time this file is called
 #   rather than having to call gpio_control.setup_gpio() EVERY time
 #   If this becomes inefficient in the future, change it.

@@ -20,17 +20,12 @@ zone_lookup = (
 POLARITY = RASPI_PIN["polarity"]
 
 def pulse_zone(zonepin):
-    #GPIO.setmode(GPIO.BCM)
-    #DW 2021-10-03-16:29 every time the python code runs we need to re-set up the gpio's
-    #GPIO.setup(zonepin, GPIO.OUT)
     ENABLE_TIME = 40e-3 # seconds, needs to be fast, otherwise we just dump current like crazy
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
     ioc.write_pin(zonepin, 1)
-    #GPIO.output(zonepin, GPIO.HIGH)
     while ((datetime.now() - start_time) < timelimit):
         pass
-    #GPIO.output(zonepin, GPIO.LOW)
     ioc.write_pin(zonepin, 0)
     now_time = datetime.now()
     total_on_dur_sec = (now_time - start_time).total_seconds()
@@ -38,31 +33,32 @@ def pulse_zone(zonepin):
 
 def set_valve(zn, open_bool):
     channel = zone_lookup[zn-1]
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(POLARITY, GPIO.OUT)
+    #DW 2021-10-11-09:50 need to now turn on/off the 9V supply before any zone actions
+    ioc.write_pin("shutdown", 0)
+    #TODO DW 2021-10-11-10:06 what happens when we're looping through all zones? 
+    #   Do we really want to enable/disable the 9V supply EVERY time? consider adding
+    #   feature that will just leave 9V on until all valve control is done.
     state_str = "ON"
     if open_bool:
-        GPIO.output(POLARITY, GPIO.HIGH)
+        ioc.write_pin(POLARITY, 1)
     else:
         state_str = "OFF"
-        GPIO.output(POLARITY, GPIO.LOW)
+        ioc.write_pin(POLARITY, 0)
 
     pulse_zone(channel)
     now_time = datetime.now()
-    cleanup()
+    ioc.write_pin("shutdown", 1)
+    #DW clean up should come when we know we're done with the gpio.
+    # I think it best to set up an atexit function for python
+    #cleanup()
     print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) {state_str}")
 
 def open_valve(zn: int):
     set_valve(zn, True)
 
-
 def open_all():
-    for num in range(6):
-        channel = zone_lookup[num]
-        GPIO.output(channel, GPIO.HIGH)
-        now_time = datetime.now()
-        print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) ON")
-
+    for num in range(1,8):
+        open_valve(num)
 
 def close_valve(zn: int):
     set_valve(zn, False)
@@ -77,24 +73,16 @@ def close_valve(zn: int):
 #    print(f"{now_time}---zone_control.py:: Zone{zn}, (GPIO{channel}) OFF")
 #    return schedule.CancelJob
 
-
 def close_all():
-    #GPIO.setmode(GPIO.BCM)
-    for num in range(6):
-        channel = zone_lookup[num]
-        #GPIO.setup(channel, GPIO.OUT)
-        GPIO.output(channel, GPIO.LOW)
-        now_time = datetime.now()
-        print(f"{now_time}---zone_control.py:: Zone{num+1}, (GPIO{channel}) OFF")
+    for num in range(1,8):
+        close_valve(num)
 
 def open_valve_for(zn: int, dur):
     open_valve(zn)
     schedule.every(dur).minutes.do(close_valve, zn=zn)
 
-
 def cleanup():
     GPIO.cleanup()
-
 
 test_mode = False
 
@@ -103,6 +91,10 @@ test_mode = False
 # todo take list of zones, durations via CLI
 # for direct call to this file:
 # CLI: > ./zone_control.py ['zone1'] [duration]
+#DW below will turn zone1 on
+# ./runPy.sh ./zone_control.py z1 0 on
+#DW below will turn zone1 off
+# ./runPy.sh ./zone_control.py z1 0 off
 if __name__ == "__main__" and not test_mode:
     zone = int(sys.argv[1][-1])  # last char is id => check 0 to 6, 0 operates all zones
     duration = int(sys.argv[2])  # number of minutes => check 0 to 300
