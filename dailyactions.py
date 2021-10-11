@@ -582,6 +582,7 @@ if __name__ == "__main__":
         import zone_control 
         zone_control.close_valve(1)
     elif choice == "DEV_RDGPIO":
+        from capstoneclient.gpio_control import *
         import zone_control 
         import RPi.GPIO as GPIO
         zone1Val = GPIO.input(7)
