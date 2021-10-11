@@ -9,6 +9,12 @@ from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
 
 GPIO_SETUP_DONE = False
 GPIO.setmode(GPIO.BCM)
+#DW 2021-10-11-12:16 normally I'd want to keep warnings. BUT, if we don't cleanup() (float all pins)
+#   then RPi will report a warning everytime we set a pin to output.
+#   If we don't set the pin to output EVERY time then RPi throws an error!
+#   We can't win either way! So I'll just hide this warning now!
+#   RPi you are driving me crazy!
+GPIO.setwarnings(False)
 
 #TODO DW 2021-10-11-10:44 decision: Do we want to initialize all gpio at bootup and never again, or every time this file is called?
 #   I will need to think on this for awhile. I guess for now we'll load/unload every time python is instantiated
@@ -37,8 +43,8 @@ def state_gpio(val):
 
 def read_pin(name):
     #print(f"read_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
-#    if not GPIO_SETUP_DONE:
-#        setup_gpio()
+    if not GPIO_SETUP_DONE:
+        setup_gpio()
     pinnum = get_pin(pin)
     if pinnum is not None:
         return GPIO.input(pinnum)
@@ -58,23 +64,23 @@ def get_pin(pin):
 
 # name corresponds to the pin name from our pcb schematic, value is True or False
 def write_pin(pin, value):
-    print(f"write_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
-#    if not GPIO_SETUP_DONE:
-#        setup_gpio()
+    #print(f"write_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
+    if not GPIO_SETUP_DONE:
+        setup_gpio()
     pinnum = get_pin(pin)
     pinval = state_gpio(value)
     if pinnum is not None and pinval is not None:
-        #GPIO.setup(pinnum, GPIO.OUT)
         return GPIO.output(pinnum, pinval)
 
 def cleanup():
+    #DW 2021-10-11-12:15 cleanup floats our outputs! We don't want this.
     #print(f"Cleaning up GPIO setup on Exit")
     #GPIO.cleanup()
     pass
 
 def setup_gpio(setDefaultStates=False, verbose=False):
     global GPIO_SETUP_DONE
-    print(f"setup_gpio GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
+    #print(f"setup_gpio GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
     #DW only do the setup once per python session
     if not GPIO_SETUP_DONE:
         #DW 2021-10-11-08:05 'ps_shutoff' will turn off the power path from the wall adapter power supply
@@ -111,7 +117,7 @@ def setup_gpio(setDefaultStates=False, verbose=False):
                 pinnum = RASPI_PIN[key]
                 GPIO.setup(pinnum, GPIO.IN)
         GPIO_SETUP_DONE = True
-        print(f"setup_gpio end GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
+        #print(f"setup_gpio end GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
         #DW 2021-10-03-13:30 no longer needed
         #GPIO.setmode(prior_pinmode)
 
@@ -125,7 +131,7 @@ def raspi_startup():
 #   If this becomes inefficient in the future, change it.
 #DW 2021-10-11-11:24 we want the gpio outputs to remain driven, for example 'shutdown' should remain 
 #   high until we want to execute a valve (on/off).
-#setup_gpio(False, False)
+setup_gpio(False, False)
 
 #DW 2021-10-11-10:42 register the cleanup function to be called when we exit python session
 #atexit.register(cleanup)
