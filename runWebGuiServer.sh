@@ -55,7 +55,11 @@ fi
 if [[ ${SIO_LAN_SITE} > 0 ]] ; then
 	echo "Website available on WIFI network"
 	# if you want to run with a LAN accessible page use below line:
-	flask run --host `hostname -I | sed 's/ //g'` &
+	hostval=`hostname -I | sed 's/ //g'`
+	if [[ "$hostval" == "" ]]; then
+		hostval=192.168.1.18 #DW the static IP I set up... we may need to change this or make it more dynamic
+	fi
+	flask run --host "$hostval" &
 	echo "***SIO-GUI-PID= $!" #print the PID of the flask process in case we need to kill it after startup
 else
 	echo "Website local to this machine"
