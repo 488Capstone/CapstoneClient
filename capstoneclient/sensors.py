@@ -1,4 +1,7 @@
+
 import time
+import types #For the adc conversions
+import math #DW natural log needed for temp eq
 
 try:
     import smbus
@@ -45,6 +48,88 @@ def read_adc(addr, pin):  # currently working in adcsource.py
     # print(f"Soil Moisture: {soilmoisture}, Soil Temp: {soiltemp}")
     return adc_value, adc_voltage
 
+def vadc_to_temp(vadc):
+    Vsupply = 3.3
+    R1 = 4.99e3
+    R0 = 10e3
+    Rnew = (vadc*R1)/(Vsupply-vadc)
+    B = 3380
+    kelvin_shift = 273.15
+    Tref = 25 + kelvin_shift
+    Tnew = -1/(math.log(Rnew/R0)/(-B) - 1/Tref) - kelvin_shift
+    return Tnew
+
+def vadc_to_current(vadc):
+    #currentGain equation is Vadc * 1/(4mA/V * Rsense * Rgain) = I_sense
+    #DW 2021-10-03-14:47 I have a OneNote eq showing how to derive this
+    currentGain = (1/(4e-3*8e-3*41.2e3))
+    return currentGain*vadc
+
+# DW function used as an internal wrapper around code that is the same between two branches of the read_adc_for function
+def read_adc_for_internal (select, arglist, verbose=True):
+    addr = arglist[0]
+    pin = arglist[1]
+    unit = arglist[2]
+    if len(arglist) > 3:
+        gain = arglist[3]
+    else:
+        gain = 1
+
+    val, volt = read_adc(addr, pin)
+    finalresult = volt
+    if isinstance(gain, types.FunctionType):
+        finalresult = gain(volt)
+    elif isinstance(gain, (float, int)):
+        finalresult = gain*volt #convert back to original magnitude before the sense ratio was applied
+    if verbose:
+        timenow = str(datetime.now())
+        #print(f"{timenow}---{select}: ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
+        print(f"{timenow}---{select}: {finalresult} {unit}")
+    return finalresult
+
+# DW This function is a convenience wrapper around the read_adc. You use the pin/net name from the schematic of our PC board 
+#   to tell it what value to read/return!
+    #DW 2021-09-29-20:12 if 'all' is selected, loop through all options and return a dict instead of a single atom value
+    # if 'all' is not selected, it returns a single value which is the numerical result that's already transferred back
+    # to the original signal value
+def read_adc_for (select, verbose=True):
+    rtrnval = 0
+            #DW 2021-09-29-19:51 format is:
+            #"<name of selection": [<I2C addr of adc>, <pin of adc>, <unit of measurement>, <optional gain used to convert back to original scale>],
+            #for the gain, if the Rdivider had a transfer func of 1/(2+1)=0.333 then the inverse gain will be (0.333)^-1= (1/3)^-1 = 3, so multiplying by 3 
+            #puts the voltage level back at the magnitude of what we were sensing
+            #TODO need to add the gain terms for the currents
+            #TODO need to add the gain terms for temp sense
+            #   Name        :  addr pin unit gain_conversion
+    choices = {
+            "valve1_current": [0x48, 0, 'A', vadc_to_current],
+            "valve2_current": [0x48, 1, 'A', vadc_to_current],
+            "valve3_current": [0x48, 2, 'A', vadc_to_current],
+            "valve4_current": [0x48, 3, 'A', vadc_to_current],
+            "valve5_current": [0x49, 0, 'A', vadc_to_current],
+            "valve6_current": [0x49, 1, 'A', vadc_to_current],
+            "solar_current" : [0x49, 2, 'A', vadc_to_current],
+            "ps_current"    : [0x49, 3, 'A', vadc_to_current],
+            "vbatt_sense"   : [0x4a, 0, 'V', (49.9+523)/49.9],
+            "temp_sense"    : [0x4a, 1, 'deg_C', vadc_to_temp],
+            "pot"           : [0x4a, 2, 'V', 1],
+            "5v_sense"      : [0x4b, 0, 'V', (49.9+102)/49.9],
+            "9v_sense"      : [0x4b, 1, 'V', (49.9+221)/49.9],
+            "solar_sense"   : [0x4b, 2, 'V', (49.9+523)/49.9],
+            "vin_sense"     : [0x4b, 3, 'V', (49.9+523)/49.9]
+            }
+    #DW 2021-09-29-20:12 if 'all' is selected, loop through all options and return a dict instead of a single atom value
+    if select == 'all':
+        rtrnval = {}
+        for key in choices.keys():
+            choice = choices[key]
+            rtrnval[key] = read_adc_for_internal(key, choice, verbose=verbose)
+    elif select in choices:
+        choice = choices[select]
+        rtrnval = read_adc_for_internal(select, choice, verbose=verbose)
+    else:
+        print(f"Select:'{select}' is not an option in Choices:{list(choices.keys())}")
+    return rtrnval
 
 
 #########################################

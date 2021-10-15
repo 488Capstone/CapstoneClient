@@ -8,14 +8,27 @@ from werkzeug.exceptions import abort
 from clientgui.db import get_db
 from clientgui.auth import login_required
 from sqlalchemy import text, exc
+import capstoneclient.zone_control_defs as zc
 
 bp = Blueprint('main', __name__)
 
 #bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-@bp.route('/home')
+@bp.route('/home', methods=('GET', 'POST'))
 @login_required
 def home ():
+    if request.method == 'POST':
+        if request.form.get('Toggle Zone1') == 'Toggle Zone1':
+            # pass
+            #print("Toggle Zone1 Valve!!!")
+            zc.toggle_valve(1)
+        elif  request.form.get('Open Zone1') == 'Open Zone1':
+            zc.open_valve(1)
+        elif  request.form.get('Close Zone1') == 'Close Zone1':
+            zc.close_valve(1)
+        else:
+            # pass # unknown
+            pass
     #cronsched = my_cronschedule()
     cronsched = CronTab(user=True)
     db = get_db()
@@ -27,6 +40,7 @@ def home ():
             systemInfo[param] = conn.execute(text('SELECT {} FROM system_configuration'.format(param))).fetchone()[0]
 
     return render_template('home.html', cronsched=cronsched, systemInfo=systemInfo)
+
 
 def my_cronschedule():
     # TECHNICAL DEBT! This code is not hardened against all possible inputs.

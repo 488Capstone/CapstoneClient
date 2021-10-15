@@ -4,18 +4,13 @@
 # this script contains setup and operation of the device.           #
 #####################################################################
 
-import os
 import sys
 import requests
-
-from crontab import CronTab
-# from cron_descriptor import get_description
 import datetime
 from dailyactions import gethistoricaldata, water_algo, ZONE_CONTROL_COMMENT_NAME, LOG_FILE_NAME, isOnRaspi
 from capstoneclient.db_manager import DBManager
 from capstoneclient.models import SystemZoneConfig
-
-
+from capstoneclient.cronjobs import * #For crontab related functions
 
 DWDBG = False
 
@@ -90,54 +85,6 @@ def my_system():
     print(f"Zone 1 soil is primarily {zone1.soil_type}. "
           f"Application rate is {zone1.application_rate} inches per hour.")
     input("Press any key to continue.")
-
-
-# my_schedule() displays basic scheduling data when requested from op_menu()
-def my_schedule():
-    # TECHNICAL DEBT! This code is not hardened against all possible inputs.
-    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    days = []  # init empty array
-
-    # dump every ZoneControl task into days array:
-    for tasks in schedule:
-        if tasks.comment == ZONE_CONTROL_COMMENT_NAME:
-            days.append([str(tasks[4]), str(tasks[0]), str(tasks[1]), str(tasks.command[23:26])])
-
-    # parse days array into usable strings:
-    day_string = ""
-    for x in range(len(days)):
-        if days[x][0] == "MON":
-            days[x][0] = "Monday"
-        elif days[x][0] == "TUE":
-            days[x][0] = "Tuesday"
-        elif days[x][0] == "WED":
-            days[x][0] = "Wednesday"
-        elif days[x][0] == "THU":
-            days[x][0] = "Thursday"
-        elif days[x][0] == "FRI":
-            days[x][0] = "Friday"
-        elif days[x][0] == "SAT":
-            days[x][0] = "Saturday"
-        elif days[x][0] == "SUN":
-            days[x][0] = "Sunday"
-
-        if days[x][1] == "0":
-            days[x][1] = "00"
-
-        if int(days[x][2]) < 12:
-            days[x][1] = days[x][1] + "AM"
-        else:
-            days[x][1] = days[x][1] + "PM"
-
-        if x+1 == len(days):
-            day_string = day_string + "and " + days[x][0]
-        else:
-            day_string = day_string + days[x][0] + ", "
-    print("Zone 1 is currently scheduled to run on {}." .format(day_string))
-    for x in range(len(days)):
-        print("On {}, zone 1 will run for {} minutes starting at {}:{}." \
-              .format(days[x][0], days[x][3], days[x][2], days[x][1]))
-
 
 def startup():
 
@@ -215,54 +162,6 @@ def startup():
     my_sys.setup_complete = True
     db.add(my_sys)
     op_menu()
-
-
-def task_scheduler():
-    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-    clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
-        #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
-        #   tells subsequent scripts/programs what the location of the client side code is
-        prescriptCmd = "cd {}; ".format(clientDir)
-        commentText = "SIO-LogFileReset"
-        schedule.remove_all(comment=commentText)
-        log_update = schedule.new(command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME),
-                                  comment=commentText)
-        #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
-        prescriptCmd += "./runPy.sh "
-        commentText = "SIO-Daily"
-        schedule.remove_all(comment=commentText)
-        daily_update = schedule.new(command=" {0} ./dailyactions.py dailyupdate ".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
-        if not DWDBG:
-            #normal operation
-            #every day at 3am
-            daily_update.setall('0 3 * * *')
-            #every 14 days at 3am?
-            log_update.setall('0 3 */14 * *')
-        else:
-            #every 10min
-            daily_update.setall('*/10 * * * *')
-            log_update.setall('*/50 * * * *')
-
-        if on_raspi:
-            #normal operation
-            commentText = "SIO-Sensors"
-            schedule.remove_all(comment=commentText)
-            sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors".format(prescriptCmd, LOG_FILE_NAME), comment=commentText)
-            sensor_query.setall('*/5 * * * *')
-        else:
-            commentText = "SIO-DEV"
-            schedule.remove_all(comment=commentText)
-            dev_mode = schedule.new(command="{0} ./dailyactions.py DEV".format(prescriptCmd, LOG_FILE_NAME), comment=commentText)
-            # every 1 minute
-            dev_mode.setall('*/1 * * * *')
-
-        schedule.write()
-        print(schedule)
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
-    return
-
 
 def application_rate_cal():
     print("Lets get calibrating! We'll only do zone 1 today (since I'm only a prototype and all).")

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#you should run this script from the directory where it's stored (the git repo top level)
+
 #SIO == Solar Irrigation Online
 #################################################################################
 #	Config Vars
@@ -8,13 +10,15 @@
 # with different values of these config vars but don't want to edit this file,
 # you can. Just do something like: export <varName>=1    in the terminal window.
 if [[ "$SIO_DEV_MODE" == "" ]]; then
-	SIO_DEV_MODE=0 #turn on for flask dev mode (website auto-updates when files changed)
+	SIO_DEV_MODE=1 #turn on for flask dev mode (website auto-updates when files changed)
 fi
 if [[ "$SIO_LAN_SITE" == "" ]]; then
-	SIO_LAN_SITE=1 #turn on when wanting to test accessing the site from another machine on the WIFI network
+	SIO_LAN_SITE=0 #turn on when wanting to test accessing the site from another machine on the WIFI network
 fi
 #export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient
+if [[ "$SIOclientDir" == "" ]]; then
 export SIOclientDir=`pwd` #you should run this script from the directory where it's stored (the git repo top level)
+fi
 
 #export FLASK_APP=webgui_main
 #rename this if we call our webgui app a new name, this is the tutorial name
@@ -51,12 +55,16 @@ fi
 if [[ ${SIO_LAN_SITE} > 0 ]] ; then
 	echo "Website available on WIFI network"
 	# if you want to run with a LAN accessible page use below line:
-	flask run --host `hostname -I | sed 's/ //g'`
+	flask run --host `hostname -I | sed 's/ //g'` &
+	echo "***SIO-GUI-PID= $!" #print the PID of the flask process in case we need to kill it after startup
 else
 	echo "Website local to this machine"
 	#run from local host
-	flask run
+	flask run &
+	echo "***SIO-GUI-PID= $!" #print the PID of the flask process in case we need to kill it after startup
 fi
+
+
 
 
 

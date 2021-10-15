@@ -34,14 +34,7 @@ def create_app(test_config=None):
     def hello():
         return 'Hello, World!'
 
-    #from flask import g
-    @app.route('/')
-    def first_page ():
-        if g.user is None:
-            #no user logged in, just show an intro page
-            return render_template('first_page.html')
-        else:
-            return render_template('home.html')
+
 
 
     # initialize the db for this app
@@ -55,5 +48,15 @@ def create_app(test_config=None):
     app.register_blueprint(main.bp)
     #DW 2021-09-14 - This doesn't work the way I thought
     #app.add_url_rule('/', endpoint='home')
+
+    #from flask import g
+    @app.route('/')
+    def first_page ():
+        return render_template('first_page.html')
+#        if g.user is None:
+#            #no user logged in, just show an intro page
+#        else:
+#            #return render_template('home.html')
+#            return main.home()
 
     return app

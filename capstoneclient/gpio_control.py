@@ -48,7 +48,7 @@ def state_gpio(val):
     else:
         return None
 
-def read_pin(name):
+def read_pin(pin):
     #print(f"read_pin GPIO_SETUP_DONE {GPIO_SETUP_DONE}")
 #    if not GPIO_SETUP_DONE:
 #        setup_gpio()
