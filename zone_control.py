@@ -2,7 +2,7 @@
 
 # todo: scheduler to reqs
 import time
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO #DW 2021-10-14-18:59 all should be handled in gpio_control now just to always handle all the setup needed
 from datetime import datetime, timedelta
 import sys
 import schedule

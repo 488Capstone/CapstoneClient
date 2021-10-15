@@ -1,8 +1,14 @@
 # DW 2021-10-03-12:21 This file is meant to handle some of the GPIO setup
 # at this point it's particularly meant to handle the gpio states at raspi initial power up
 #import time
-import RPi.GPIO as GPIO
+
+from capstoneclient.isOnRaspi import * # for isOnRaspi()
 from capstoneclient.raspi_pins import RASPI_PIN, RASPI_OUTPUTS
+on_raspi = isOnRaspi()
+if on_raspi:
+    import RPi.GPIO as GPIO
+else:
+    import capstoneclient.not_raspi as GPIO
 
 #DW 2021-10-11-11:25 we don't need the cleanup on exit for now
 #import atexit #DW to cleanup the gpio stuff when python3 exits

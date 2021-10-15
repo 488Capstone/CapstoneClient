@@ -589,4 +589,4 @@ if __name__ == "__main__":
         zone1Val = GPIO.input(7)
         print(f"{datetime.now()}---{choice}: zone1 value = {repr(zone1Val)}")
     else:
-        print("{}---INPUT PARAM CHOICE NOT RECOGNIZED: '{choice}'".format(str(datetime.now())))
+        print(f"{datetime.now()}---INPUT PARAM CHOICE NOT RECOGNIZED: '{choice}'")
