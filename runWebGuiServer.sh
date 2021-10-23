@@ -53,6 +53,7 @@ fi
 #fi
 
 if [[ ${SIO_LAN_SITE} > 0 ]] ; then
+	sleep 30
 	echo "Website available on WIFI network"
 	# if you want to run with a LAN accessible page use below line:
 	hostval=`hostname -I | sed 's/ //g'`
