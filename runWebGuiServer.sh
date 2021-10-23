@@ -59,6 +59,7 @@ if [[ ${SIO_LAN_SITE} > 0 ]] ; then
 	if [[ "$hostval" == "" ]]; then
 		hostval=192.168.1.18 #DW the static IP I set up... we may need to change this or make it more dynamic
 	fi
+	echo "***Running on host: $hostval"
 	flask run --host "$hostval" &
 	echo "***SIO-GUI-PID= $!" #print the PID of the flask process in case we need to kill it after startup
 else
