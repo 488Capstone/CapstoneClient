@@ -15,5 +15,5 @@ env
 *.swp
 /.idea/dataSources.local.xml
 /.idea/dataSources.xml
-
+raspi_ip.txt
 *egg-info
