@@ -57,7 +57,8 @@ if [[ ${SIO_LAN_SITE} > 0 ]] ; then
 	# if you want to run with a LAN accessible page use below line:
 	hostval=`hostname -I | sed 's/ //g'`
 	if [[ "$hostval" == "" ]]; then
-		hostval=192.168.1.18 #DW the static IP I set up... we may need to change this or make it more dynamic
+		hostval = `cat ${SIOclientDir}/raspi_ip.txt`
+		#hostval=192.168.1.18 #DW the static IP I set up... we may need to change this or make it more dynamic
 	fi
 	echo "***Running on host: $hostval"
 	flask run --host "$hostval" &
