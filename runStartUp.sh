@@ -31,13 +31,17 @@ echo "SIO_GUI = $SIO_GUI"
 echo "SIO_PYSTART = $SIO_PYSTART"
 echo "SIO_DEMO = $SIO_DEMO"
 
+if [[ $SIO_PYSTART > 0 ]]; then
+	#set gpio's and crontab
+	./runPy.sh ./dailyactions.py STARTUP
+fi
+
 webgui_runfile="${SIOclientDir}/runWebGuiServer.sh"
 webgui_logfile="${SIOclientDir}/webgui.log"
 
 if [[ $SIO_GUI > 0 && -e "$webgui_runfile" ]]; then
+	# need to sleep for 10 seconds to allow dhclient to run before the website so we have an IP!
+	sleep 10
 	$webgui_runfile >> $webgui_logfile 2>&1 
 fi
 
-if [[ $SIO_PYSTART > 0 ]]; then
-	./runPy.sh ./dailyactions.py STARTUP
-fi
