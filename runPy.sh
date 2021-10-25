@@ -10,4 +10,5 @@ rest_of_args=$@
 echo -n `date +"%Y-%m-%d %H:%M:%S.xxxxxx---"` >> ./client_dev.log 2>&1
 echo "Run Py script: ${file} $rest_of_args" >> ./client_dev.log 2>&1
 . env/bin/activate
-./env/bin/python3 $file $rest_of_args >> ./client_dev.log 2>&1 
+#DW added -u for 'unbuffered' mode, which hopefully means I don't have to put flush=True on all prints
+./env/bin/python3 -u $file $rest_of_args >> ./client_dev.log 2>&1 
