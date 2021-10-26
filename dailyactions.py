@@ -408,6 +408,8 @@ if __name__ == "__main__":
 #                val, volt = read_adc(addr, pin)
 #                timenow = str(datetime.now())
 #                print(f"{timenow}---ADC(0x{addr:02x})-PIN({pin}):: value: {val}, voltage: {volt}")
+    elif choice == "DEV_CLEAR_ZC":
+        clear_zone_control()
     elif choice == "DEV_VO":
         import zone_control 
         zone_control.open_valve(1)

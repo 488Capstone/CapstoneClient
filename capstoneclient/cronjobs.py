@@ -74,6 +74,12 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
 
+def clear_zone_control():
+    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    result = schedule.remove_all(comment=ZONE_CONTROL_COMMENT_NAME)
+    print(f"schedule.remove_all(comment={ZONE_CONTROL_COMMENT_NAME}) => {result}")
+    schedule.write() # saves the changes to system crontab
+
 def create_static_system_crons():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     clientDir = os.getenv('SIOclientDir')

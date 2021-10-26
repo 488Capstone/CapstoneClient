@@ -40,17 +40,18 @@ if __name__ == "__main__" and not test_mode:
         elif on_off == 'off':
             close_valve(zone)
         else:
-            open_valve_for(zone, duration)
-            while schedule.get_jobs():
-                schedule.run_pending()
+            print(f"Inside zone_control.py, zone={zone}, duration={duration}, on_off={on_off}")
+            #open_valve_for(zone, duration)
+            #while schedule.get_jobs():
+                #schedule.run_pending()
 
     else:
         print(f"bad zone/duration values: zone={zone}, duration={duration}, on_off={on_off}")
 
-if test_mode:
-    open_valve_for(1, 0.1)
-    while schedule.get_jobs():
-        schedule.run_pending()
-    #cleanup()  # cleanup turns everything to input
-
+#if test_mode:
+#    open_valve_for(1, 0.1)
+#    while schedule.get_jobs():
+#        schedule.run_pending()
+#    #cleanup()  # cleanup turns everything to input
+#
 #sys.exit()
