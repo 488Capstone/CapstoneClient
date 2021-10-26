@@ -29,47 +29,47 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         #else:
             #command_string = "{} ./zone_control_devmode.py {} {} " .format(prescriptCmd, str(zoneid), str(duration)) #  , LOG_FILE_NAME)  # adds args to zone_control.py
         
-        if setRealSched:
-            for x in range(len(days)):
-                # NB: turning on for duration doesnt work well.. keeps raspi locked up for minutes/hours in
-                # zone_control.py.  best way to have cron run python every 15 min or so, python handles turning on/off
-                # during those times but for now: make two chron entries, one on and one off (after duration).. third
-                # value now on_off
-                # todo: fix finish time on next day
-
-                # adding three terms: second tells zone to go on or off, 1st tells zone it is a timed watering,
-                # wait for off signal. Can set other than 0 for a short duration (raspi inside this script for duration)
-                new_command_string = command_string+f"0 on {LOG_FILE_NAME}"
-                task = schedule.new(command=new_command_string,
-                                    comment=commentText)  # creates a new entry in the crontab
-                task.dow.on(days[x])  # day of week as per object passed to the method
-                task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
-                task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
-
-                schedule.write()  # finalizes the task in the crontab
-                print("task {} created".format(x))
-
-                new_command_string = command_string + f"0 off {LOG_FILE_NAME}"
-                task = schedule.new(command=new_command_string,
-                                    comment=commentText)  # creates a new entry in the crontab
-                task.dow.on(days[x])  # day of week as per object passed to the method
-                finish_minute = pref_time_min + duration
-                finish_hour = pref_time_hrs
-                if finish_minute > 59:
-                    finish_hour += finish_hour // 60
-                    finish_minute = finish_minute % 60
-
-                task.minute.on(int(finish_minute))  # minute-hand as per object passed to the method
-                task.hour.on(int(finish_hour))  # hour-hand as per object passed to the method
-
-                schedule.write()  # finalizes the task in the crontab
-                print("task {} created" .format(x))
-        else:
-            # use short duration function, 1 minute => no off chron
-            new_command_string = command_string + f"1 on {LOG_FILE_NAME}"
-            task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
-            task.setall('*/5 * * * *') # run every 5min
-            schedule.write()  # finalizes the task in the crontab
+#        if setRealSched:
+#            for x in range(len(days)):
+#                # NB: turning on for duration doesnt work well.. keeps raspi locked up for minutes/hours in
+#                # zone_control.py.  best way to have cron run python every 15 min or so, python handles turning on/off
+#                # during those times but for now: make two chron entries, one on and one off (after duration).. third
+#                # value now on_off
+#                # todo: fix finish time on next day
+#
+#                # adding three terms: second tells zone to go on or off, 1st tells zone it is a timed watering,
+#                # wait for off signal. Can set other than 0 for a short duration (raspi inside this script for duration)
+#                new_command_string = command_string+f"0 on {LOG_FILE_NAME}"
+#                task = schedule.new(command=new_command_string,
+#                                    comment=commentText)  # creates a new entry in the crontab
+#                task.dow.on(days[x])  # day of week as per object passed to the method
+#                task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
+#                task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+#
+#                schedule.write()  # finalizes the task in the crontab
+#                print("task {} created".format(x))
+#
+#                new_command_string = command_string + f"0 off {LOG_FILE_NAME}"
+#                task = schedule.new(command=new_command_string,
+#                                    comment=commentText)  # creates a new entry in the crontab
+#                task.dow.on(days[x])  # day of week as per object passed to the method
+#                finish_minute = pref_time_min + duration
+#                finish_hour = pref_time_hrs
+#                if finish_minute > 59:
+#                    finish_hour += finish_hour // 60
+#                    finish_minute = finish_minute % 60
+#
+#                task.minute.on(int(finish_minute))  # minute-hand as per object passed to the method
+#                task.hour.on(int(finish_hour))  # hour-hand as per object passed to the method
+#
+#                schedule.write()  # finalizes the task in the crontab
+#                print("task {} created" .format(x))
+#        else:
+#            # use short duration function, 1 minute => no off chron
+#            new_command_string = command_string + f"1 on {LOG_FILE_NAME}"
+#            task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
+#            task.setall('*/5 * * * *') # run every 5min
+#            schedule.write()  # finalizes the task in the crontab
     else:
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
