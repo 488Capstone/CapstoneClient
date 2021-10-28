@@ -52,7 +52,7 @@ printf "DW: Ask me about it if you're thinking, 'wtf why?' Maybe there's a bette
 pip install -e .
 
 #below script shoot start up the webgui, set the crontab, and set the starting state of GPIO's
-sudo ./runStartUp.sh
+./runStartUp.sh
 
 #printf "\n***Install Python Flask\n"
 #python3 -m pip install Flask==2.0.1
