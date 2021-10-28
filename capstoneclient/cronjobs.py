@@ -3,6 +3,7 @@
 
 import os
 from crontab import CronTab
+import getpass as gp
 # from cron_descriptor import get_description
 
 DWDBG = False
@@ -15,7 +16,7 @@ LOG_FILE_NAME = './client_dev.log'
 #################################################
 def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
+    if checkClientDir() and checkUser():
         schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
         commentText = ZONE_CONTROL_COMMENT_NAME  
         schedule.remove_all(comment=commentText)
@@ -70,8 +71,6 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
 #            task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
 #            task.setall('*/5 * * * *') # run every 5min
 #            schedule.write()  # finalizes the task in the crontab
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
 
 def clear_zone_control():
@@ -83,7 +82,7 @@ def clear_zone_control():
 def create_static_system_crons():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
+    if checkClientDir() and checkUser():
         #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
         #   tells subsequent scripts/programs what the location of the client side code is
         prescriptCmd = "cd {}; ".format(clientDir)
@@ -122,14 +121,12 @@ def create_static_system_crons():
 
         schedule.write()
         print(schedule)
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
     return
 
 
 def create_cron_job(cmdstr, schedstr, commentText, rm_old=True):
     clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
+    if checkClientDir() and checkUser():
         schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
         if rm_old:
             schedule.remove_all(comment=commentText)
@@ -139,11 +136,24 @@ def create_cron_job(cmdstr, schedstr, commentText, rm_old=True):
         task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
         task.setall(schedstr) 
         schedule.write()  # finalizes the task in the crontab
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
 def create_startup_cron ():
-        create_cron_job(' ./runStartUp.sh', '@reboot', STARTUP_COMMENT_NAME)
+    create_cron_job(' ./runStartUp.sh', '@reboot', STARTUP_COMMENT_NAME)
+
+def checkUser ():
+    username = gp.getuser()
+    if username == 'pi':  
+        return True
+    else:
+        print(f"username should be 'pi' to install crontabs, username: {username}")
+        return False
+
+def checkClientDir ():
+    if os.getenv('SIOclientDir') is not None:
+        return True
+    else:
+        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
+        return False
 
 # my_schedule() displays basic scheduling data when requested from op_menu()
 def my_schedule():

@@ -14,14 +14,23 @@ class DBManager:
             #print("Creating database at path: " + dbFileName)
             self.engine = create_engine(dbFileName, echo=False, future=True)
             self.my_session = Session(self.engine)
+            self.start_database()
             # self.Session = sessionmaker(self.engine)
         else:
             print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
     def start_databases(self):
+        #TODO remove all references to 'start_databases()'
+        #DW legacy code, just make it inert for now
+        pass
+
+    def start_database(self):
         """ Initializes database from models, creates tables if not present."""
+        #DW creates all of the tables if they don't already exist
         Base.metadata.create_all(self.engine)
-        if not self.get(SystemZoneConfig, "system"):
+        self.my_session.commit()
+        sys = self.get(SystemZoneConfig, "system")
+        if not sys or not sys.setup_complete:
             self.setup_system()
 
     def close(self):
@@ -30,7 +39,6 @@ class DBManager:
 
     def add(self, obj):
         """ Adds an object to the correct table - defined by model."""
-
         self.my_session.add(obj)
         self.my_session.commit()
 
@@ -42,14 +50,16 @@ class DBManager:
         return self.my_session.get(classname, key)
 
     def setup_system(self):
-        new_system = SystemZoneConfig(id="system", setup_complete=False)
-        self.add(new_system)
+        new_system = self.get(SystemZoneConfig, "system")
+        if new_system is None:
+            new_system = SystemZoneConfig(id="system", setup_complete=False)
+            self.add(new_system)
         # todo: num_zones to system db
         num_zones = 1
         for r in range(num_zones):
             new_zone = SystemZoneConfig(id="zone"+str(r+1))
             self.add(new_zone)
-        self.set_db_initialvals(self)
+        self.set_db_initialvals()
 
     def set_db_initialvals(self):
         print('Database Initializing...')
@@ -65,6 +75,7 @@ class DBManager:
         my_sys.city, my_sys.state, my_sys.zipcode, my_sys.lat, my_sys.long = \
             loc['city'], loc['region_code'], loc['postal'], loc['latitude'], loc['longitude']
 
+        my_sys.setup_complete = True
         db.add(my_sys)  # add/update object
 
         print(f"We think you're in {my_sys.city}, {my_sys.state} {my_sys.zipcode}")
