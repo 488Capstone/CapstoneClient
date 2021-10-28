@@ -3,6 +3,7 @@
 
 import os
 from crontab import CronTab
+import getpass as gp
 # from cron_descriptor import get_description
 
 DWDBG = False
@@ -15,7 +16,7 @@ LOG_FILE_NAME = './client_dev.log'
 #################################################
 def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
     clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
+    if checkClientDir() and checkUser():
         schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
         commentText = ZONE_CONTROL_COMMENT_NAME  
         schedule.remove_all(comment=commentText)
@@ -29,55 +30,59 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
         #else:
             #command_string = "{} ./zone_control_devmode.py {} {} " .format(prescriptCmd, str(zoneid), str(duration)) #  , LOG_FILE_NAME)  # adds args to zone_control.py
         
-        if setRealSched:
-            for x in range(len(days)):
-                # NB: turning on for duration doesnt work well.. keeps raspi locked up for minutes/hours in
-                # zone_control.py.  best way to have cron run python every 15 min or so, python handles turning on/off
-                # during those times but for now: make two chron entries, one on and one off (after duration).. third
-                # value now on_off
-                # todo: fix finish time on next day
+#        if setRealSched:
+#            for x in range(len(days)):
+#                # NB: turning on for duration doesnt work well.. keeps raspi locked up for minutes/hours in
+#                # zone_control.py.  best way to have cron run python every 15 min or so, python handles turning on/off
+#                # during those times but for now: make two chron entries, one on and one off (after duration).. third
+#                # value now on_off
+#                # todo: fix finish time on next day
+#
+#                # adding three terms: second tells zone to go on or off, 1st tells zone it is a timed watering,
+#                # wait for off signal. Can set other than 0 for a short duration (raspi inside this script for duration)
+#                new_command_string = command_string+f"0 on {LOG_FILE_NAME}"
+#                task = schedule.new(command=new_command_string,
+#                                    comment=commentText)  # creates a new entry in the crontab
+#                task.dow.on(days[x])  # day of week as per object passed to the method
+#                task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
+#                task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
+#
+#                schedule.write()  # finalizes the task in the crontab
+#                print("task {} created".format(x))
+#
+#                new_command_string = command_string + f"0 off {LOG_FILE_NAME}"
+#                task = schedule.new(command=new_command_string,
+#                                    comment=commentText)  # creates a new entry in the crontab
+#                task.dow.on(days[x])  # day of week as per object passed to the method
+#                finish_minute = pref_time_min + duration
+#                finish_hour = pref_time_hrs
+#                if finish_minute > 59:
+#                    finish_hour += finish_hour // 60
+#                    finish_minute = finish_minute % 60
+#
+#                task.minute.on(int(finish_minute))  # minute-hand as per object passed to the method
+#                task.hour.on(int(finish_hour))  # hour-hand as per object passed to the method
+#
+#                schedule.write()  # finalizes the task in the crontab
+#                print("task {} created" .format(x))
+#        else:
+#            # use short duration function, 1 minute => no off chron
+#            new_command_string = command_string + f"1 on {LOG_FILE_NAME}"
+#            task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
+#            task.setall('*/5 * * * *') # run every 5min
+#            schedule.write()  # finalizes the task in the crontab
 
-                # adding three terms: second tells zone to go on or off, 1st tells zone it is a timed watering,
-                # wait for off signal. Can set other than 0 for a short duration (raspi inside this script for duration)
-                new_command_string = command_string+f"0 on {LOG_FILE_NAME}"
-                task = schedule.new(command=new_command_string,
-                                    comment=commentText)  # creates a new entry in the crontab
-                task.dow.on(days[x])  # day of week as per object passed to the method
-                task.minute.on(int(pref_time_min))  # minute-hand as per object passed to the method
-                task.hour.on(int(pref_time_hrs))  # hour-hand as per object passed to the method
 
-                schedule.write()  # finalizes the task in the crontab
-                print("task {} created".format(x))
-
-                new_command_string = command_string + f"0 off {LOG_FILE_NAME}"
-                task = schedule.new(command=new_command_string,
-                                    comment=commentText)  # creates a new entry in the crontab
-                task.dow.on(days[x])  # day of week as per object passed to the method
-                finish_minute = pref_time_min + duration
-                finish_hour = pref_time_hrs
-                if finish_minute > 59:
-                    finish_hour += finish_hour // 60
-                    finish_minute = finish_minute % 60
-
-                task.minute.on(int(finish_minute))  # minute-hand as per object passed to the method
-                task.hour.on(int(finish_hour))  # hour-hand as per object passed to the method
-
-                schedule.write()  # finalizes the task in the crontab
-                print("task {} created" .format(x))
-        else:
-            # use short duration function, 1 minute => no off chron
-            new_command_string = command_string + f"1 on {LOG_FILE_NAME}"
-            task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
-            task.setall('*/5 * * * *') # run every 5min
-            schedule.write()  # finalizes the task in the crontab
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
-
+def clear_zone_control():
+    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    result = schedule.remove_all(comment=ZONE_CONTROL_COMMENT_NAME)
+    print(f"schedule.remove_all(comment={ZONE_CONTROL_COMMENT_NAME}) => {result}")
+    schedule.write() # saves the changes to system crontab
 
 def create_static_system_crons():
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
+    if checkClientDir() and checkUser():
         #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
         #   tells subsequent scripts/programs what the location of the client side code is
         prescriptCmd = "cd {}; ".format(clientDir)
@@ -116,14 +121,12 @@ def create_static_system_crons():
 
         schedule.write()
         print(schedule)
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
     return
 
 
 def create_cron_job(cmdstr, schedstr, commentText, rm_old=True):
     clientDir = os.getenv('SIOclientDir')
-    if clientDir is not None:
+    if checkClientDir() and checkUser():
         schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
         if rm_old:
             schedule.remove_all(comment=commentText)
@@ -133,11 +136,24 @@ def create_cron_job(cmdstr, schedstr, commentText, rm_old=True):
         task = schedule.new(command=command_string, comment=commentText)  # creates a new entry in the crontab
         task.setall(schedstr) 
         schedule.write()  # finalizes the task in the crontab
-    else:
-        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
 def create_startup_cron ():
-        create_cron_job(' ./runStartUp.sh', '@reboot', STARTUP_COMMENT_NAME)
+    create_cron_job(' ./runStartUp.sh', '@reboot', STARTUP_COMMENT_NAME)
+
+def checkUser ():
+    username = gp.getuser()
+    if username == 'pi':  
+        return True
+    else:
+        print(f"username should be 'pi' to install crontabs, username: {username}")
+        return False
+
+def checkClientDir ():
+    if os.getenv('SIOclientDir') is not None:
+        return True
+    else:
+        print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
+        return False
 
 # my_schedule() displays basic scheduling data when requested from op_menu()
 def my_schedule():
