@@ -31,13 +31,16 @@ def disable_demo_water_mode():
     db.jsonSet(DEMO_KEY_NAME, False)
 
 def demo_water_mode():
-    ENABLE_TIME = 40 # seconds
+    ENABLE_TIME = 420 # seconds
     demo_init()
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
     exit_demo_mode = False
     soilmoist_threshold = 500
     soiltemp_threshold = 15
+    open_time_sec = 3.5
+    close_time_sec = 0.5
+    skip_time_sec = 1.5
     while ((datetime.now() - start_time) < timelimit):
         #TODO read db to make sure we're not supposed to exit
         exit_demo_mode = query_demo_exit()
@@ -52,19 +55,19 @@ def demo_water_mode():
         if moisture_cond and temp_cond:
             zc.open_valve(1)
             #print("",flush=True,end='')
-            time.sleep(5)
+            time.sleep(open_time_sec)
             zc.close_valve(1)
             #print("",flush=True,end='')
+            time.sleep(close_time_sec)
         else:
             if not temp_cond:
                 print(f"Temperature is too low, skipping this watering session")
             if not moisture_cond:
                 print(f"Moisture is too high, extra water unnecessary, skipping this watering session")
             #print("",flush=True,end='')
-            time.sleep(2)
+            time.sleep(skip_time_sec)
         #DW flush output so we see in log file
         #print("",flush=True,end='')
-        time.sleep(2)
 
     zc.close_valve(1)
     print(f"########################")
