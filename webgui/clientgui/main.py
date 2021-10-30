@@ -2,6 +2,7 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
+import os
 from crontab import CronTab
 from cron_descriptor import get_description
 from werkzeug.exceptions import abort
@@ -17,15 +18,30 @@ bp = Blueprint('main', __name__)
 @bp.route('/home', methods=('GET', 'POST'))
 @login_required
 def home ():
+    clientDir = os.getenv('SIOclientDir')
     if request.method == 'POST':
         if request.form.get('Toggle Zone1') == 'Toggle Zone1':
             # pass
             #print("Toggle Zone1 Valve!!!")
             zc.toggle_valve(1)
         elif  request.form.get('Open Zone1') == 'Open Zone1':
-            zc.open_valve(1)
+            if clientDir is None:
+                zc.open_valve(1)
+            else:
+                os.system(f"cd {clientDir}; ./runPy.sh ./zone_control.py z1 0 on")
         elif  request.form.get('Close Zone1') == 'Close Zone1':
-            zc.close_valve(1)
+            if clientDir is None:
+                zc.close_valve(1)
+            else:
+                os.system(f"cd {clientDir}; ./runPy.sh ./zone_control.py z1 0 off")
+        elif  request.form.get('Enable WaterDemo') == 'Enable WaterDemo':
+            if clientDir is not None:
+                os.system(f"cd {clientDir}; ./runPy.sh ./capstoneclient/demo.py")
+        elif  request.form.get('Disable WaterDemo') == 'Disable WaterDemo':
+            import capstoneclient.demo as demo
+            demo.disable_demo_water_mode()
+#            if clientDir is not None:
+#                os.system(f"cd {clientDir}; ./runPy.sh ./capstoneclient/demo.py")
         else:
             # pass # unknown
             pass

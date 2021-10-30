@@ -1,14 +1,38 @@
 
 import time
-from capstoneclient.sensors import read_soil_sensor, read_adc, read_adc_for
 from datetime import timedelta, datetime
 import capstoneclient.zone_control_defs as zc
+import capstoneclient.db_manager as dm
+from capstoneclient.isOnRaspi import * # for isOnRaspi()
 
-def demo_water_mode():
+on_raspi = isOnRaspi()
+if on_raspi:
+    # this try/except lets code function outside of raspberry pi for development.
+    from capstoneclient.sensors import read_baro_sensor, read_soil_sensor, read_adc, read_adc_for
+else:
+    DWDBG = True
+    from capstoneclient.not_raspi import read_baro_sensor, read_soil_sensor, read_adc, read_adc_for
+
+DEMO_KEY_NAME = 'en_demo_water_mode'
+
+def query_demo_exit():
+    db = dm.DBManager()
+    return (not db.jsonGet(DEMO_KEY_NAME))
+
+def demo_init():
     print(f"########################")
     print(f"Entering Demo Water Mode")
     print(f"########################")
+    db = dm.DBManager()
+    db.jsonSet(DEMO_KEY_NAME, True)
+
+def disable_demo_water_mode():
+    db = dm.DBManager()
+    db.jsonSet(DEMO_KEY_NAME, False)
+
+def demo_water_mode():
     ENABLE_TIME = 40 # seconds
+    demo_init()
     timelimit = timedelta(seconds=ENABLE_TIME)
     start_time = datetime.now()
     exit_demo_mode = False
@@ -16,7 +40,7 @@ def demo_water_mode():
     soiltemp_threshold = 15
     while ((datetime.now() - start_time) < timelimit):
         #TODO read db to make sure we're not supposed to exit
-        #exit_demo_mode = read db
+        exit_demo_mode = query_demo_exit()
         if exit_demo_mode:
             break
         

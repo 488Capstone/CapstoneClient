@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData
+from sqlalchemy import Column, Boolean, Integer, Float, String, DateTime, Date, MetaData, JSON
 from sqlalchemy.orm import declarative_base
 
 
@@ -64,6 +64,7 @@ class HistoryItem(Base):
                f"etcalc = {self.etcalc}>"
 
 
+#TODO DW I think these should ideally be two seperate things... but for now, w/e
 # SYSTEM table holds data on both zones and the system as a whole. Some columns are only for zone/system data.
 class SystemZoneConfig(Base):
     __tablename__ = "system_configuration"
@@ -89,3 +90,11 @@ class SystemZoneConfig(Base):
     application_rate = Column(Float)
     water_deficit = Column(Float)
     setup_complete = Column(Boolean)
+
+class JsonTable(Base):
+    __tablename__ = "json"
+    # what is this Sequence("item_id_seq")? I don't know, I'm just following an example online
+    id = Column(String, primary_key=True, nullable=False)
+    json = Column(JSON, nullable = True)
+
+

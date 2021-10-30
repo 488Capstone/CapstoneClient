@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from .models import Base, SystemZoneConfig, SensorEntry, HistoryItem
+from sqlalchemy.orm.attributes import flag_modified
+from .models import Base, SystemZoneConfig, SensorEntry, HistoryItem, JsonTable
 import os
 
 
@@ -17,7 +18,7 @@ class DBManager:
             self.start_database()
             # self.Session = sessionmaker(self.engine)
         else:
-            print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
+            print("env var 'SIOclientDir' must be set in shell\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
 
     def start_databases(self):
         #TODO remove all references to 'start_databases()'
@@ -30,8 +31,13 @@ class DBManager:
         Base.metadata.create_all(self.engine)
         self.my_session.commit()
         sys = self.get(SystemZoneConfig, "system")
+        jsonTable = self.getc(JsonTable, "system", self.init_sys_json_table)
         if not sys or not sys.setup_complete:
             self.setup_system()
+
+    def init_sys_json_table(self):
+        jsonTable = JsonTable(id="system", json=dict())
+        return jsonTable
 
     def close(self):
         self.my_session.close()
@@ -48,6 +54,20 @@ class DBManager:
         # with self.Session() as session:
         #     return session.get(classname, key)
         return self.my_session.get(classname, key)
+
+    def getc(self, classname, key, initFunc=None):
+        """ Gets an object from the correct table, or creates a new one if it doesn't exist - defined by model."""
+        # with self.Session() as session:
+        #     return session.get(classname, key)
+        table = self.my_session.get(classname, key)
+        if table is None:
+            if initFunc is None:
+                table = classname(id=key)
+            else:
+                table = initFunc()
+            self.add(table)
+            table = self.my_session.get(classname, key)
+        return table
 
     def setup_system(self):
         new_system = self.get(SystemZoneConfig, "system")
@@ -127,6 +147,19 @@ class DBManager:
         zone1.water_deficit = waterdeficit
         db.add(zone1)  # add/update object
         print('Finished Database Initialization')
+
+    def jsonSet(self, key, value):
+        jsonTable = self.getc(JsonTable, "system", self.init_sys_json_table)
+        jsonTable.json[key] = value
+        flag_modified(jsonTable, "json")
+        self.add(jsonTable)
+
+    def jsonGet(self, key):
+        jsonTable = self.getc(JsonTable, "system", self.init_sys_json_table)
+        if key in jsonTable.json.keys():
+            return jsonTable.json[key]
+        else:
+            return None
 
 
 
