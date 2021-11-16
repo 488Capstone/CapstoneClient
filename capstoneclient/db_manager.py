@@ -13,6 +13,9 @@ class DBManager:
             #DATABASE=os.path.join(clientDir, 'my_data'),
             dbFileName = f"sqlite+pysqlite:///{clientDir}/my_data"
             #print("Creating database at path: " + dbFileName)
+            # DW 2021-11-16-11:37 I think there may be some issue having the webgui creating it's own db session and this python also doing it...
+            # So if we want we could specify below param:
+            #self.engine = create_engine(dbFileName, echo=False, future=True, connect_args={'check_same_thread': False} )
             self.engine = create_engine(dbFileName, echo=False, future=True)
             self.my_session = Session(self.engine)
             self.start_database()

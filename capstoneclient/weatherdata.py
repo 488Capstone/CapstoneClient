@@ -15,9 +15,11 @@ DWDBG = False
 
 KEY_LAST_WEATHERPULL = "last_weather_request"
 KEY_RAW_WEATHER = "raw_weather_response"
+KEY_WEATHER_DATA = "weather_response_data"
 
-DB = dm.DBManager()
-my_sys = DB.get(SystemZoneConfig, "system")
+if __name__ == "__main__":
+    DB = dm.DBManager()
+    my_sys = DB.get(SystemZoneConfig, "system")
 
     #DB.jsonSet(DEMO_KEY_NAME, True)
 
@@ -92,9 +94,15 @@ def getweather(days, lat_w, long_w, nocache=False):
 
         settimestamp_field(KEY_LAST_WEATHERPULL, todaydate)
         DB.jsonSet(KEY_RAW_WEATHER, rtrnVal)
+        for pastday in rtrnVal['history']:
+            avg_weather = avg_hourly_dict(pastday['hourly'])
+            pastday['hourly_avg'] = avg_weather
+            #remove 'hourly' so it's not confusing
+            pastday.pop('hourly')
+        DB.jsonSet(KEY_WEATHER_DATA, rtrnVal)
     else:
         print("last weather API request was within the last day, pulling from cached results instead")
-        rtrnVal = DB.jsonGet(KEY_RAW_WEATHER)
+        rtrnVal = DB.jsonGet(KEY_WEATHER_DATA)
         #print_raw_weather(rtrnVal)
     return rtrnVal
 
@@ -142,11 +150,6 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
 
     # generate list of day items with weather data, apply solar data to matching days
     weather_list = getweather(days, latitude, longitude)
-    for pastday in weather_list['history']:
-        avg_weather = avg_hourly_dict(pastday['hourly'])
-        pastday['hourly_avg'] = avg_weather
-        #remove 'hourly'
-        pastday.pop('hourly')
 
     #printjson(weather_list)
 
@@ -159,6 +162,67 @@ def gethistoricaldata(days: int = 1, latitude: float = 0., longitude=0.): #-> li
     #for item in weather_solar_list:
     #    final_list.append(et_calculations(item))
     return final_list
+
+def get_weather_data_for_webgui_formatnum(num):
+    return f"{num:0.2f}"
+
+def get_weather_data_for_webgui(dbarg=dm.DBManager()):
+    global DB
+    DB = dbarg
+    my_sys = DB.get(SystemZoneConfig, "system")
+    weather_data = getweather(5, my_sys.lat, my_sys.long)
+    hist = weather_data['history']
+    rtrnVal = {
+                'today': weather_data['today'],
+                'history': []
+            }
+ #   key_units = {
+ #           '':
+ #         "temp": 'C',
+ #         "feels_like": 300.483564388752,
+ #         "pressure": 1016.29199385643,
+ #         "humidity": 15.25280487537384,
+ #         "dew_point": 273.0873318362236,
+ #         "uvi": 1.5307422065734864,
+ #         "clouds": 1.37109375,
+ #         "visibility": 10000.0,
+ #         "wind_speed": 0.033081448078155516,
+ #         "wind_deg": 13.453672647476196,
+ #         "wind_gust": 1.34
+ #           }
+    for day in hist:
+    #using insert flips the order, which is what we want for the webgui
+        rtrnVal['history'].insert(0, dict())
+        print(rtrnVal['history'])
+        curdict = rtrnVal['history'][0]
+        day = day['hourly_avg']
+        #print(day)
+        date = dt.datetime.fromtimestamp(round(day['dt'])).date()
+        date = date.strftime("%d-%b-%Y")
+        curdict['Date'] = date
+        avgkeys = list(day.keys())
+        #loop over every key except the first ('dt') and format the key/value to be ready for webgui printing
+        for avgkey in avgkeys[1:]:
+            newkey = f"Avg. {avgkey}"
+            curdict[newkey] = get_weather_data_for_webgui_formatnum(day[avgkey])
+    return rtrnVal
+
+
+#     "hourly_avg": {
+#          "dt": 1637013600.0004292,
+#          "temp": 302.15573389649387,
+#          "feels_like": 300.483564388752,
+#          "pressure": 1016.29199385643,
+#          "humidity": 15.25280487537384,
+#          "dew_point": 273.0873318362236,
+#          "uvi": 1.5307422065734864,
+#          "clouds": 1.37109375,
+#          "visibility": 10000.0,
+#          "wind_speed": 0.033081448078155516,
+#          "wind_deg": 13.453672647476196,
+#          "wind_gust": 1.34
+#     }
+    
 
 
 ############################################################################
@@ -338,4 +402,411 @@ def parsesolar(lat_ps: float, long_ps: float, wl: list): #-> list[HistoryItem]:
 
     return wl_ps
 
-
+###################################################################
+#   Example of historical weather data
+###################################################################
+#info can also be found on site:
+#   https://openweathermap.org/api/one-call-api#current
+# DW IMPORTANT! it turns out the current weather request will return a 'daily' field that has the forecast for future days!
+#
+#>>> import capstoneclient.weatherdata as wd
+#>>> hist = wd.DWgethist()
+#gethistoricaldata(5) has begun
+#requesting Web API, last weather API request was NOT within the last day
+#
+# each entry in history is index+1 days from TODAY. so hist['history'][0] is yesterday, [1] is the day before that, etc
+#>>> wd.printjson(hist['history'][0])
+#{
+#     "lat": 33.3121,
+#     "lon": -111.8213,
+#     "timezone": "America/Phoenix",
+#     "timezone_offset": -25200,
+#     "current": {
+#          "dt": 1636994477,
+#          "sunrise": 1636984735,
+#          "sunset": 1637022313,
+#          "temp": 293.39,
+#          "feels_like": 292.1,
+#          "pressure": 1022,
+#          "humidity": 24,
+#          "dew_point": 272.3,
+#          "uvi": 1.8,
+#          "clouds": 1,
+#          "visibility": 10000,
+#          "wind_speed": 0,
+#          "wind_deg": 0,
+#          "weather": [
+#               {
+#                    "id": 800,
+#                    "main": "Clear",
+#                    "description": "clear sky",
+#                    "icon": "01d"
+#               }
+#          ]
+#     },
+#     "hourly_avg": {
+#          "dt": 1637013600.0004292,
+#          "temp": 302.15573389649387,
+#          "feels_like": 300.483564388752,
+#          "pressure": 1016.29199385643,
+#          "humidity": 15.25280487537384,
+#          "dew_point": 273.0873318362236,
+#          "uvi": 1.5307422065734864,
+#          "clouds": 1.37109375,
+#          "visibility": 10000.0,
+#          "wind_speed": 0.033081448078155516,
+#          "wind_deg": 13.453672647476196,
+#          "wind_gust": 1.34
+#     }
+#}
+#>>> 
+#
+#
+#>>> wd.printjson(hist['today'])
+#{
+#     "lat": 33.3121,
+#     "lon": -111.8213,
+#     "timezone": "America/Phoenix",
+#     "timezone_offset": -25200,
+#     "current": {
+#          "dt": 1637080877,
+#          "sunrise": 1637071191,
+#          "sunset": 1637108680,
+#          "temp": 293.04,
+#          "feels_like": 291.79,
+#          "pressure": 1017,
+#          "humidity": 27,
+#          "dew_point": 273.51,
+#          "uvi": 1.76,
+#          "clouds": 40,
+#          "visibility": 10000,
+#          "wind_speed": 0,
+#          "wind_deg": 0,
+#          "weather": [
+#               {
+#                    "id": 802,
+#                    "main": "Clouds",
+#                    "description": "scattered clouds",
+#                    "icon": "03d"
+#               }
+#          ]
+#     },
+#     "daily": [
+#          {
+#               "dt": 1637089200,
+#               "sunrise": 1637071191,
+#               "sunset": 1637108680,
+#               "moonrise": 1637104260,
+#               "moonset": 1637061960,
+#               "moon_phase": 0.42,
+#               "temp": {
+#                    "day": 295.58,
+#                    "min": 290.89,
+#                    "max": 300.73,
+#                    "night": 292.76,
+#                    "eve": 296.45,
+#                    "morn": 291
+#               },
+#               "feels_like": {
+#                    "day": 294.43,
+#                    "night": 291.27,
+#                    "eve": 295.23,
+#                    "morn": 289.44
+#               },
+#               "pressure": 1015,
+#               "humidity": 21,
+#               "dew_point": 272.31,
+#               "wind_speed": 2.61,
+#               "wind_deg": 341,
+#               "wind_gust": 3.26,
+#               "weather": [
+#                    {
+#                         "id": 803,
+#                         "main": "Clouds",
+#                         "description": "broken clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 64,
+#               "pop": 0,
+#               "uvi": 3.2
+#          },
+#          {
+#               "dt": 1637175600,
+#               "sunrise": 1637157648,
+#               "sunset": 1637195049,
+#               "moonrise": 1637192340,
+#               "moonset": 1637151780,
+#               "moon_phase": 0.45,
+#               "temp": {
+#                    "day": 297.34,
+#                    "min": 289.79,
+#                    "max": 298.33,
+#                    "night": 291.95,
+#                    "eve": 294.54,
+#                    "morn": 289.79
+#               },
+#               "feels_like": {
+#                    "day": 296.21,
+#                    "night": 290.43,
+#                    "eve": 293.2,
+#                    "morn": 288.11
+#               },
+#               "pressure": 1015,
+#               "humidity": 15,
+#               "dew_point": 268.95,
+#               "wind_speed": 1.78,
+#               "wind_deg": 77,
+#               "wind_gust": 2.34,
+#               "weather": [
+#                    {
+#                         "id": 804,
+#                         "main": "Clouds",
+#                         "description": "overcast clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 100,
+#               "pop": 0,
+#               "uvi": 3.05
+#          },
+#          {
+#               "dt": 1637262000,
+#               "sunrise": 1637244104,
+#               "sunset": 1637281420,
+#               "moonrise": 1637280540,
+#               "moonset": 1637241600,
+#               "moon_phase": 0.48,
+#               "temp": {
+#                    "day": 298.38,
+#                    "min": 289.22,
+#                    "max": 300.81,
+#                    "night": 292.87,
+#                    "eve": 295.81,
+#                    "morn": 289.28
+#               },
+#               "feels_like": {
+#                    "day": 297.32,
+#                    "night": 291.47,
+#                    "eve": 294.58,
+#                    "morn": 287.58
+#               },
+#               "pressure": 1018,
+#               "humidity": 14,
+#               "dew_point": 268.82,
+#               "wind_speed": 2.35,
+#               "wind_deg": 98,
+#               "wind_gust": 3.27,
+#               "weather": [
+#                    {
+#                         "id": 800,
+#                         "main": "Clear",
+#                         "description": "clear sky",
+#                         "icon": "01d"
+#                    }
+#               ],
+#               "clouds": 0,
+#               "pop": 0,
+#               "uvi": 3.53
+#          },
+#          {
+#               "dt": 1637348400,
+#               "sunrise": 1637330560,
+#               "sunset": 1637367792,
+#               "moonrise": 1637368980,
+#               "moonset": 1637331420,
+#               "moon_phase": 0.5,
+#               "temp": {
+#                    "day": 295.35,
+#                    "min": 289.25,
+#                    "max": 298.69,
+#                    "night": 293.51,
+#                    "eve": 296.69,
+#                    "morn": 289.25
+#               },
+#               "feels_like": {
+#                    "day": 294.07,
+#                    "night": 292.15,
+#                    "eve": 295.57,
+#                    "morn": 287.54
+#               },
+#               "pressure": 1018,
+#               "humidity": 17,
+#               "dew_point": 268.99,
+#               "wind_speed": 2.77,
+#               "wind_deg": 95,
+#               "wind_gust": 3.27,
+#               "weather": [
+#                    {
+#                         "id": 803,
+#                         "main": "Clouds",
+#                         "description": "broken clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 59,
+#               "pop": 0,
+#               "uvi": 3.65
+#          },
+#          {
+#               "dt": 1637434800,
+#               "sunrise": 1637417015,
+#               "sunset": 1637454166,
+#               "moonrise": 1637457660,
+#               "moonset": 1637421240,
+#               "moon_phase": 0.54,
+#               "temp": {
+#                    "day": 296.57,
+#                    "min": 291,
+#                    "max": 298.6,
+#                    "night": 293.81,
+#                    "eve": 296.39,
+#                    "morn": 291
+#               },
+#               "feels_like": {
+#                    "day": 295.44,
+#                    "night": 292.48,
+#                    "eve": 295.27,
+#                    "morn": 289.49
+#               },
+#               "pressure": 1016,
+#               "humidity": 18,
+#               "dew_point": 271.24,
+#               "wind_speed": 2.13,
+#               "wind_deg": 124,
+#               "wind_gust": 3.07,
+#               "weather": [
+#                    {
+#                         "id": 804,
+#                         "main": "Clouds",
+#                         "description": "overcast clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 100,
+#               "pop": 0,
+#               "uvi": 4
+#          },
+#          {
+#               "dt": 1637521200,
+#               "sunrise": 1637503471,
+#               "sunset": 1637540541,
+#               "moonrise": 1637546700,
+#               "moonset": 1637511060,
+#               "moon_phase": 0.57,
+#               "temp": {
+#                    "day": 296.54,
+#                    "min": 292.25,
+#                    "max": 296.86,
+#                    "night": 293.48,
+#                    "eve": 294.75,
+#                    "morn": 292.25
+#               },
+#               "feels_like": {
+#                    "day": 295.43,
+#                    "night": 292.56,
+#                    "eve": 293.85,
+#                    "morn": 290.82
+#               },
+#               "pressure": 1016,
+#               "humidity": 19,
+#               "dew_point": 271.24,
+#               "wind_speed": 4.53,
+#               "wind_deg": 10,
+#               "wind_gust": 6.25,
+#               "weather": [
+#                    {
+#                         "id": 804,
+#                         "main": "Clouds",
+#                         "description": "overcast clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 100,
+#               "pop": 0,
+#               "uvi": 4
+#          },
+#          {
+#               "dt": 1637607600,
+#               "sunrise": 1637589926,
+#               "sunset": 1637626919,
+#               "moonrise": 1637636040,
+#               "moonset": 1637600640,
+#               "moon_phase": 0.6,
+#               "temp": {
+#                    "day": 296.59,
+#                    "min": 292.39,
+#                    "max": 298.97,
+#                    "night": 294.21,
+#                    "eve": 297.19,
+#                    "morn": 292.39
+#               },
+#               "feels_like": {
+#                    "day": 295.64,
+#                    "night": 293.29,
+#                    "eve": 296.28,
+#                    "morn": 291.28
+#               },
+#               "pressure": 1018,
+#               "humidity": 25,
+#               "dew_point": 275.53,
+#               "wind_speed": 3.85,
+#               "wind_deg": 218,
+#               "wind_gust": 6.08,
+#               "weather": [
+#                    {
+#                         "id": 804,
+#                         "main": "Clouds",
+#                         "description": "overcast clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 100,
+#               "pop": 0.01,
+#               "uvi": 4
+#          },
+#          {
+#               "dt": 1637694000,
+#               "sunrise": 1637676381,
+#               "sunset": 1637713298,
+#               "moonrise": 1637725680,
+#               "moonset": 1637690040,
+#               "moon_phase": 0.63,
+#               "temp": {
+#                    "day": 291.36,
+#                    "min": 287.98,
+#                    "max": 292.08,
+#                    "night": 287.98,
+#                    "eve": 290.41,
+#                    "morn": 288.83
+#               },
+#               "feels_like": {
+#                    "day": 290.96,
+#                    "night": 287.37,
+#                    "eve": 289.78,
+#                    "morn": 288.49
+#               },
+#               "pressure": 1014,
+#               "humidity": 66,
+#               "dew_point": 284.71,
+#               "wind_speed": 2.89,
+#               "wind_deg": 120,
+#               "wind_gust": 4.74,
+#               "weather": [
+#                    {
+#                         "id": 500,
+#                         "main": "Rain",
+#                         "description": "light rain",
+#                         "icon": "10d"
+#                    }
+#               ],
+#               "clouds": 82,
+#               "pop": 1,
+#               "rain": 7.59,
+#               "uvi": 4
+#          }
+#     ]
+#}
+#>>> 
+#
+###################################################################

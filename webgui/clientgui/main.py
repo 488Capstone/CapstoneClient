@@ -10,6 +10,7 @@ from clientgui.db import get_db
 from clientgui.auth import login_required
 from sqlalchemy import text, exc
 import capstoneclient.zone_control_defs as zc
+import capstoneclient.weatherdata as wd
 #import subprocess as sp
 
 bp = Blueprint('main', __name__)
@@ -55,8 +56,13 @@ def home ():
         for param in paramList:
             #print(param)
             systemInfo[param] = conn.execute(text('SELECT {} FROM system_configuration'.format(param))).fetchone()[0]
-
-    return render_template('home.html', cronsched=cronsched, systemInfo=systemInfo)
+    
+    weather_data = wd.get_weather_data_for_webgui(db)
+    weather_hist = weather_data['history']
+    #weather_hist = [{'hey':0}]
+    #already flipped in the data
+    #weather_hist.reverse() # flip the order so that left is the furthest date away and right most is yesterday
+    return render_template('home.html', cronsched=cronsched, systemInfo=systemInfo,weatherHist=weather_hist)
 
 
 def my_cronschedule():

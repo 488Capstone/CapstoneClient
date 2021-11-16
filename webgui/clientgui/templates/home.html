@@ -13,6 +13,20 @@
                 <input type="submit" value="Enable WaterDemo" name="Enable WaterDemo"/>
                 <input type="submit" value="Disable WaterDemo" name="Disable WaterDemo"/>
         </form>
+
+  <h2>5-day Weather History</h2>
+  <div class="weatherHist">
+  <table>
+	{% for key in weatherHist[0].keys() %}
+	  <tr>
+		<td style="text-align: right;">{{key}}</td> 
+		{% for day in weatherHist %}
+			<td style="text-align: left; padding-left: 10px">{{day[key]}}</td> 
+		{% endfor %}
+	  </tr>
+	{% endfor %}
+  </table>
+  </div>
   <h2>SYSTEM</h2>
   <!--<div >ZipCode: {{ zipcode }}</div>-->
   <table>
