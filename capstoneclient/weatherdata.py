@@ -193,7 +193,7 @@ def get_weather_data_for_webgui(dbarg=dm.DBManager()):
     for day in hist:
     #using insert flips the order, which is what we want for the webgui
         rtrnVal['history'].insert(0, dict())
-        print(rtrnVal['history'])
+        #print(rtrnVal['history'])
         curdict = rtrnVal['history'][0]
         day = day['hourly_avg']
         #print(day)
