@@ -10,8 +10,7 @@ import time
 from datetime import date, datetime
 from capstoneclient.models import SensorEntry, SystemZoneConfig, HistoryItem
 from capstoneclient.db_manager import DBManager
-from capstoneclient.isOnRaspi import * # for isOnRaspi()
-#from capstoneclient.cronjobs import * # for CronTab scheduler functions
+from capstoneclient.isOnRaspi import isOnRaspi 
 
 
 
@@ -89,7 +88,7 @@ def water_algo(zone: SystemZoneConfig) -> int:
 if __name__ == "__main__":
 
     db = DBManager()
-    db.start_databases()
+    #db.start_databases()
 
     #DW 2021-09-18-14:49 - Collin had this set as argv[0], but that would return the script name, wouldn't it? It was not working for me. Now this is working.
     #DW the reason he had it set to 0 might be because when importing the file in capstoneclient.py it would throw and error if set to 1!
@@ -156,8 +155,9 @@ if __name__ == "__main__":
 #        water_algo(zone1)
 
     elif choice == "STARTUP":
-        create_startup_cron()
-        create_static_system_crons()
+        import capstoneclient.cronjobs as cj # for CronTab scheduler functions
+        cj.create_startup_cron()
+        cj.create_static_system_crons()
         if on_raspi:
             from capstoneclient.gpio_control import *
             raspi_startup()
@@ -165,9 +165,10 @@ if __name__ == "__main__":
             print("DBG: Ran raspi_startup()")
 
     elif choice == "SET_STARTUP_CRON":
+        import capstoneclient.cronjobs as cj # for CronTab scheduler functions
         #TODO add web gui to the @reboot crontab
         #print("DW - need to add webgui boot up to the cron job when possible")
-        create_startup_cron()
+        cj.create_startup_cron()
 
     elif choice == "DEV":
         print("{}---DEV: test ".format(str(datetime.now())))
