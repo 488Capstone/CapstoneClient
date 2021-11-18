@@ -4,12 +4,16 @@
 import os
 from crontab import CronTab
 import getpass as gp
-# from cron_descriptor import get_description
+#import cron_descriptor as cd #get_description
 
 DWDBG = False
 
 ZONE_CONTROL_COMMENT_NAME = 'SIO-ZoneControl'
 STARTUP_COMMENT_NAME = 'SIO-StartUp'
+SENSORS_COMMENT_NAME = "SIO-Sensors"
+DAILY_COMMENT_NAME = "SIO-Daily"
+LOGFILE_COMMENT_NAME = "SIO-LogFileReset"
+
 LOG_FILE_NAME = './client_dev.log'
 #################################################
 #    schedules watering events using crontab    #
@@ -86,13 +90,13 @@ def create_static_system_crons():
         #DW 2021-09-20-08:29 prescriptCmd is expected to run before the cron job executed scripts, it will set the env var that
         #   tells subsequent scripts/programs what the location of the client side code is
         prescriptCmd = "cd {}; ".format(clientDir)
-        commentText = "SIO-LogFileReset"
+        commentText = LOGFILE_COMMENT_NAME
         schedule.remove_all(comment=commentText)
         log_update = schedule.new(command="{0} mv -v {1} {1}_last >> {1} 2>&1".format(prescriptCmd, LOG_FILE_NAME),
                                   comment=commentText)
         #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
         prescriptCmd += "./runPy.sh "
-        commentText = "SIO-Daily"
+        commentText = DAILY_COMMENT_NAME
         schedule.remove_all(comment=commentText)
         daily_update = schedule.new(command=" {0} ./dailyactions.py dailyupdate ".format(prescriptCmd, LOG_FILE_NAME) , comment=commentText)
         if not DWDBG:
@@ -108,7 +112,7 @@ def create_static_system_crons():
 
         #if on_raspi:
             #normal operation
-        commentText = "SIO-Sensors"
+        commentText = SENSORS_COMMENT_NAME
         schedule.remove_all(comment=commentText)
         sensor_query = schedule.new(command="{0} ./dailyactions.py readsensors".format(prescriptCmd, LOG_FILE_NAME), comment=commentText)
         sensor_query.setall('*/5 * * * *')
@@ -154,6 +158,43 @@ def checkClientDir ():
     else:
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
         return False
+
+def get_cron_sched_for_webgui():
+    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    descript = {
+            ZONE_CONTROL_COMMENT_NAME: "Turns on/off a zone valve in the system",
+            STARTUP_COMMENT_NAME: "Sets the starting state of the GPIO's and ensures cronjobs are defined",
+            SENSORS_COMMENT_NAME: "Queries numerical samples from all of the sensors",
+            DAILY_COMMENT_NAME: "Pulls in new weather data from the internet",
+            LOGFILE_COMMENT_NAME: "Starts a new logfile so the logs don't grow indefinitely"
+            }
+    task_list = []
+    for task in schedule:
+        #this should return only the timing specification for the task
+        task_cron_sched = task.slices.render()
+        #DW @reboot is apparently unsupported by cron_descriptor
+        if task_cron_sched == "@reboot":
+            timeval = "At Reboot"
+        else:
+            timeval = task.description(use_24hour_time_format=True)
+
+        task_list.append({
+            'comment':task.comment,
+            'command':task.command,
+            'time':timeval,
+            'info':DWget(descript, task.comment, "")
+            }
+        )
+    return task_list
+
+def DWprintSched():
+    print(get_cron_sched_for_webgui())
+
+def DWget(dic, key, defval):
+    if key not in dic.keys():
+        return defval
+    else:
+        return dic[key]
 
 # my_schedule() displays basic scheduling data when requested from op_menu()
 def my_schedule():

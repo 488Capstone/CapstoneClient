@@ -3,14 +3,15 @@ from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 import os
-from crontab import CronTab
-from cron_descriptor import get_description
+#from crontab import CronTab
+#from cron_descriptor import get_description
 from werkzeug.exceptions import abort
 from clientgui.db import get_db
 from clientgui.auth import login_required
 from sqlalchemy import text, exc
 import capstoneclient.zone_control_defs as zc
 import capstoneclient.weatherdata as wd
+import capstoneclient.cronjobs as cj
 #import subprocess as sp
 
 bp = Blueprint('main', __name__)
@@ -48,21 +49,23 @@ def home ():
             # pass # unknown
             pass
     #cronsched = my_cronschedule()
-    cronsched = CronTab(user=True)
+    croninfo = cj.get_cron_sched_for_webgui()
     db = get_db()
     systemInfo = {}
     with db.engine.connect() as conn:
         paramList = ["zipcode", "city", "state", "lat", "long", "soil_type", "plant_type", "microclimate", "slope", "pref_time_hrs", "pref_time_min", "application_rate", "water_deficit", "setup_complete"]
         for param in paramList:
             #print(param)
-            systemInfo[param] = conn.execute(text('SELECT {} FROM system_configuration'.format(param))).fetchone()[0]
+            paramval = conn.execute(text('SELECT {} FROM system_configuration'.format(param))).fetchone()[0]
+            if paramval is not None:
+                systemInfo[param] = paramval
     
     weather_data = wd.get_weather_data_for_webgui(db)
     weather_hist = weather_data['history']
     #weather_hist = [{'hey':0}]
     #already flipped in the data
     #weather_hist.reverse() # flip the order so that left is the furthest date away and right most is yesterday
-    return render_template('home.html', cronsched=cronsched, systemInfo=systemInfo,weatherHist=weather_hist)
+    return render_template('home.html', croninfo=croninfo, systemInfo=systemInfo,weatherHist=weather_hist)
 
 
 def my_cronschedule():

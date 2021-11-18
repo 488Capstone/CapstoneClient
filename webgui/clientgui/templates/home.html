@@ -27,7 +27,8 @@
 	{% endfor %}
   </table>
   </div>
-  <h2>SYSTEM</h2>
+  <h2>System</h2>
+  <h3>Info</h3>
   <!--<div >ZipCode: {{ zipcode }}</div>-->
   <table>
 	  <tr>
@@ -43,11 +44,25 @@
 	  </tr>
 	{% endfor %}
   </table>
-  <h2>CronTab</h2>
-	{% for message in cronsched %}
-	<div class="cron">{{ message }}<br><br></div>
+  <h3>System Scheduled Events - CronTab</h3>
+	<div class="cron">
+	  <table>
+	  <tr>
+	  <th style="text-align: center;">Name</th>
+	  <th style="text-align: center;">Schedule</th>
+	  <th style="text-align: center;">Description</th>
+	  <th style="text-align: center;">Command</th>
+	  </tr>
+	{% for taskdict in croninfo %}
+	  <tr>
+			<td style="text-align: center;">{{taskdict['comment']}}</td> 
+			<td style="text-align: center;">{{taskdict['time']}}</td> 
+			<td style="text-align: center;">{{taskdict['info']}}</td> 
+			<td style="text-align: center;">{{taskdict['command']}}</td> 
+	  </tr>
 	{% endfor %}
-	<!--<div class="crontab">CronTab value: {{ cronsched }}</div>-->
+	  </table>
+	</div>
 
 {% endblock %}
 
