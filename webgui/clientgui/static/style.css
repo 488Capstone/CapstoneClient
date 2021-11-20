@@ -19,11 +19,17 @@ nav ul li a, nav ul li span, header .action { display: block; padding: 0.5rem; }
 .post .body { white-space: pre-line; }
 .content:last-child { margin-bottom: 0; }
 .content form { margin: 1em 0; display: flex; flex-direction: column; }
-.content label { font-weight: bold; margin-bottom: 0.5em; }
+.content label { font-weight: normal; margin-bottom: 0.5em; }
 .content input, .content textarea { margin-bottom: 1em; }
 .content textarea { min-height: 12em; resize: vertical; }
 input.danger { color: #cc2f2e; }
 input[type=submit] { align-self: start; min-width: 10em; }
+
+/* Trying to get the hour/min fields to be on one line
+.create_cron input{
+	float:left;
+}
+*/
 
 tr:nth-child(even) {
 	background-color: #D6EEEE;

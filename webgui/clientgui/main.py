@@ -78,6 +78,22 @@ def my_cronschedule():
   #      return_str = return_str + "\nOn {}, zone 1 will run for {} minutes starting at {}:{}.".format(days[x][0], days[x][3], days[x][2], days[x][1]))
     return str(return_str)
 
+@bp.route('/add_zone_event', methods=('GET', 'POST'))
+@login_required
+def add_zone_event ():
+    dowlist = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+    if request.method == 'POST':
+        dow_input_list = request.form.getlist('dow')
+        start_hr = request.form.get('start_hr')
+        start_min = request.form.get('start_min')
+        end_hr = request.form.get('end_hr')
+        end_min = request.form.get('end_min')
+        #cj.create_zone_event(1, ['SAT','SUN','TUE','THU'], 14, 21, 14, 22)
+        #def create_zone_event(zonenum, dow, start_hr, start_min, end_hr, end_min):
+        cj.create_zone_event(1, dow_input_list, start_hr, start_min, end_hr, end_min)
+
+    croninfo = cj.get_cron_sched_for_webgui(cj.ZONE_CONTROL_COMMENT_NAME)
+    return render_template('add_zone_event.html', croninfo=croninfo, dowlist=dowlist)
 
 @bp.route('/clientlog', methods=('GET', 'POST'))
 @login_required

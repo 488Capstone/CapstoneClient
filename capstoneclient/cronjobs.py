@@ -19,21 +19,22 @@ LOG_FILE_NAME = './client_dev.log'
 #    schedules watering events using crontab    #
 #################################################
 def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
-    clientDir = os.getenv('SIOclientDir')
-    if checkClientDir() and checkUser():
-        schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
-        commentText = ZONE_CONTROL_COMMENT_NAME  
-        schedule.remove_all(comment=commentText)
-        #DW this var allows us to test the real schedule setting if we're in dev mode, if it remains 0 then we're in an accerated developer test mode
-        #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
-        setRealSched = False
-        #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
-        prescriptCmd = "cd {}; ./runPy.sh ".format(clientDir)
-        #if on_raspi:
-        command_string = "{} ./zone_control.py {} " .format(prescriptCmd, str(zoneid))  #, LOG_FILE_NAME)   adds args to zone_control.py
-        #else:
-            #command_string = "{} ./zone_control_devmode.py {} {} " .format(prescriptCmd, str(zoneid), str(duration)) #  , LOG_FILE_NAME)  # adds args to zone_control.py
-        
+    pass
+    #clientDir = os.getenv('SIOclientDir')
+    #if checkClientDir() and checkUser():
+    #    schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
+    #    commentText = ZONE_CONTROL_COMMENT_NAME  
+    #    schedule.remove_all(comment=commentText)
+    #    #DW this var allows us to test the real schedule setting if we're in dev mode, if it remains 0 then we're in an accerated developer test mode
+    #    #DW while we're still developing I guess it'll be nice to have the valve opening and closing at a faster rate
+    #    setRealSched = False
+    #    #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
+    #    prescriptCmd = "cd {}; ./runPy.sh ".format(clientDir)
+    #    #if on_raspi:
+    #    command_string = "{} ./zone_control.py z{} " .format(prescriptCmd, str(zoneid))  #, LOG_FILE_NAME)   adds args to zone_control.py
+    #    #else:
+    #        #command_string = "{} ./zone_control_devmode.py {} {} " .format(prescriptCmd, str(zoneid), str(duration)) #  , LOG_FILE_NAME)  # adds args to zone_control.py
+    #    
 #        if setRealSched:
 #            for x in range(len(days)):
 #                # NB: turning on for duration doesnt work well.. keeps raspi locked up for minutes/hours in
@@ -77,7 +78,69 @@ def water_scheduler(zoneid, days, duration, pref_time_hrs, pref_time_min):
 #            schedule.write()  # finalizes the task in the crontab
 
 
+#example
+#cron = CronTab(user='pi')
+#task = cron[4]
+#timeval = task.slices.render()
+#cj.remove_cron_job(timeval, task.command)
+#
+def remove_cron_job(time, cmd):
+    cron = CronTab(user='pi')  # opens the crontab (list of all tasks)
+    iterator = cron.find_time(time)
+    for item in iterator:
+        if item.command == cmd:
+            cron.remove(item)
+    cron.write()
+
+#DW expects a num for zonenum, list like ['MON','TUES'] for dow, and 24 hour time type integers for the rest
+#cj.create_zone_event(1, ['SUN','TUE','THU'], 13, 30, 14, 35)
+#cj.create_zone_event(1, ['SAT','SUN','TUE','THU'], 14, 21, 14, 22)
+def create_zone_event(zonenum, dow, start_hr, start_min, end_hr, end_min):
+    clientDir = os.getenv('SIOclientDir')
+    if checkClientDir() and checkUser():
+        # if day of week is only one day, then put it into a list so we can unpack it to the cron dow func
+        if not isinstance(dow, list):
+            dow = [dow]
+        schedule = CronTab(user='pi')  # opens the crontab (list of all tasks)
+        commentText = ZONE_CONTROL_COMMENT_NAME  
+        #schedule.remove_all(comment=commentText)
+        #DW 2021-09-21-20:58 env/bin/python3 is necessary so that our subscripts have the python modules like crontab installed
+        prescriptCmd = "cd {}; ./runPy.sh ".format(clientDir)
+        command_string = "{} ./zone_control.py z{} " .format(prescriptCmd, str(zonenum))  #, LOG_FILE_NAME)   adds args to zone_control.py
+        #DW TODO end hour time cannot be smaller than start time.
+
+        #DW below will turn zone1 on
+        # ./runPy.sh ./zone_control.py z1 0 on
+        #DW below will turn zone1 off
+        # ./runPy.sh ./zone_control.py z1 0 off
+
+        ##############################################
+        # ZONE ON
+        ##############################################
+        # adding three terms: second tells zone to go on or off, 1st tells zone it is a timed watering,
+        # wait for off signal. Can set other than 0 for a short duration (raspi inside this script for duration)
+        new_command_string = command_string+f"0 on"
+        task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
+        #unpack dow list so that it shows up as multiple args to dow.on func
+        task.dow.on(*dow)  # day of week as per object passed to the method
+        task.minute.on(int(start_min))  # minute-hand as per object passed to the method
+        task.hour.on(int(start_hr))  # hour-hand as per object passed to the method
+
+        ##############################################
+        # ZONE OFF
+        ##############################################
+        new_command_string = command_string + f"0 off"
+        task = schedule.new(command=new_command_string, comment=commentText)  # creates a new entry in the crontab
+        #unpack dow list so that it shows up as multiple args to dow.on func
+        task.dow.on(*dow)  # day of week as per object passed to the method
+        task.minute.on(int(end_min))  # minute-hand as per object passed to the method
+        task.hour.on(int(end_hr))  # hour-hand as per object passed to the method        schedule.write()  # finalizes the task in the crontab
+        #print("task {} created" .format(x))
+        schedule.write() # saves the changes to system crontab
+
 def clear_zone_control():
+    #schedule = CronTab(user='pi')  # opens the crontab (list of all tasks)
+    #DW consider using user='pi'
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     result = schedule.remove_all(comment=ZONE_CONTROL_COMMENT_NAME)
     print(f"schedule.remove_all(comment={ZONE_CONTROL_COMMENT_NAME}) => {result}")
@@ -159,7 +222,10 @@ def checkClientDir ():
         print("env var 'SIOclientDir' must be set in shell to run cron jobs\n\tbash example: export SIOclientDir=/home/pi/capstoneProj/fromGit/CapstoneClient")
         return False
 
-def get_cron_sched_for_webgui():
+def get_cron_sched_for_webgui(filterList=None):
+    if isinstance(filterList, str):
+        filterList = [filterList]
+
     schedule = CronTab(user=True)  # opens the crontab (list of all tasks)
     descript = {
             ZONE_CONTROL_COMMENT_NAME: "Turns on/off a zone valve in the system",
@@ -170,21 +236,22 @@ def get_cron_sched_for_webgui():
             }
     task_list = []
     for task in schedule:
-        #this should return only the timing specification for the task
-        task_cron_sched = task.slices.render()
-        #DW @reboot is apparently unsupported by cron_descriptor
-        if task_cron_sched == "@reboot":
-            timeval = "At Reboot"
-        else:
-            timeval = task.description(use_24hour_time_format=True)
+        if filterList is None or (task.comment in filterList):
+            #this should return only the timing specification for the task
+            task_cron_sched = task.slices.render()
+            #DW @reboot is apparently unsupported by cron_descriptor
+            if task_cron_sched == "@reboot":
+                timeval = "At Reboot"
+            else:
+                timeval = task.description(use_24hour_time_format=True)
 
-        task_list.append({
-            'comment':task.comment,
-            'command':task.command,
-            'time':timeval,
-            'info':DWget(descript, task.comment, "")
-            }
-        )
+            task_list.append({
+                'comment':task.comment,
+                'command':task.command,
+                'time':timeval,
+                'info':DWget(descript, task.comment, "")
+                }
+            )
     return task_list
 
 def DWprintSched():
