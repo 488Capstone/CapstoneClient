@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}ADC Read-Out{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <div class="adctable">
+  <table>
+	  <tr>
+	  <th style="text-align: right;">Name</th>
+	  <th style="text-align: left;">Value</th>
+	  </tr>
+	{% for key in sensor_dict.keys() %}
+	  <tr>
+		<div class="adcval">
+			<td style="text-align: right;">{{key}}</td> 
+			<td style="text-align: left; padding-left: 10px">{{sensor_dict[key]}}</td> 
+		</div>
+	  </tr>
+	{% endfor %}
+  </table>
+  </div>
+  <!-- <div class="log_class" style="white-space: pre-wrap;">{{ logText }}<br><br></div> -->
+{% endblock %}
+
+
+
+
+

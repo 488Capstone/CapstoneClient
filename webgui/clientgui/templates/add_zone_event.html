@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Add Zone Open/Close{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+<div class="create_cron">
+		<br>
+		<br>
+		Water On Days
+		<hr>
+	<form method="post" action="/add_zone_event">
+		<div style="max-width:2000px">
+		<table>
+			<tr>
+			{% for day in dowlist %}
+			<td> <label for="dow">{{day}}</label> </td>
+			{% endfor %}
+			</tr>
+			<tr>
+			{% for day in dowlist %}
+			<td> <input type="checkbox" id="dow" name="dow" value="{{day}}"> </td>
+			{% endfor %}
+			</tr>
+		</table>
+		<div>
+		<br>
+		Watering Time
+		<hr>
+		<label for="start">Start (0-23):(0-59)</label>  
+		<input type="number" id="start_hr" name="start_hr" min="0" max="23"> :
+		<input type="number" id="start_min" name="start_min" min="0" max="59">
+		<br>
+		<label for="end">Stop (0-23):(0-59)</label>
+		<input type="number" id="end_hr" name="end_hr" min="0" max="23"> :
+		<input type="number" id="end_min" name="end_min" min="0" max="59">
+		<br>
+                <input type="submit" value="Add" name="Add"/>
+		<br>
+		<hr>
+                <input type="submit" value="Clear All Events" name="rm"/>
+	</form>
+</div>
+<hr>
+  <h3>Existing Zone Events - CronTab</h3>
+	<div class="cron">
+	  <table>
+	  <tr>
+	  <th style="text-align: center;">Name</th>
+	  <th style="text-align: center;">Schedule</th>
+	  <th style="text-align: center;">Description</th>
+	  <th style="text-align: center;">Command</th>
+	  </tr>
+	{% for taskdict in croninfo %}
+	  <tr>
+			<td style="text-align: center;">{{taskdict['comment']}}</td> 
+			<td style="text-align: center;">{{taskdict['time']}}</td> 
+			<td style="text-align: center;">{{taskdict['info']}}</td> 
+			<td style="text-align: center;">{{taskdict['command']}}</td> 
+	  </tr>
+	{% endfor %}
+	  </table>
+	</div>
+
+{% endblock %}
+
+
+
+
+

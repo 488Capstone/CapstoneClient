@@ -7,6 +7,8 @@
     {% if g.user %}
       <li><span>{{ g.user['username'] }}</span>
       <li><a href="{{ url_for('main.home') }}">Home</a>
+      <li><a href="{{ url_for('main.add_zone_event') }}">Zone Events</a>
+      <li><a href="{{ url_for('main.adcview') }}">ADC Readout</a>
       <li><a href="{{ url_for('main.clientlog') }}">LogFile</a>
       <div>  </div>
       <li><a href="{{ url_for('auth.logout') }}">Log Out</a>

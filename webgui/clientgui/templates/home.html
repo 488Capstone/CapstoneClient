@@ -13,7 +13,27 @@
                 <input type="submit" value="Disable WaterDemo" name="Disable WaterDemo"/>
         </form>
 
-  <h2>5-day Weather History</h2>
+  <h2>Weather</h2>
+  <h3>Weather Forecast</h3>
+  <div class="weather_fore">
+  <table>
+	{% for key in weather_fore[0].keys() %}
+	  <tr>
+		<th style="text-align: right;">{{key}}</th> 
+	    {% if key == "Date" %}
+		{% for day in weather_fore %}
+			<th style="text-align: center; padding-left: 10px">{{day[key]}}</th> 
+		{% endfor %}
+	    {% else %}
+		{% for day in weather_fore %}
+			<td style="text-align: center; padding-left: 10px">{{day[key]}}</td> 
+		{% endfor %}
+	    {% endif %}
+	  </tr>
+	{% endfor %}
+  </table>
+  </div>
+  <h3>5-day Weather History</h3>
   <div class="weatherHist">
   <table>
 	{% for key in weatherHist[0].keys() %}
@@ -34,7 +54,6 @@
   </div>
   <h2>System</h2>
   <h3>Info</h3>
-  <!--<div >ZipCode: {{ zipcode }}</div>-->
   <table>
 	  <tr>
 	  <th style="text-align: right;">Name</th>
@@ -50,7 +69,7 @@
 	{% endfor %}
   </table>
   <h3>System Scheduled Events - CronTab</h3>
-	<a href="{{ url_for('main.add_zone_event') }}">Add Zone Open/Close Event</a>
+	<a href="{{ url_for('main.add_zone_event') }}">Add/Rm Zone Events</a>
 	<br>
 	<br>
 	<div class="cron">

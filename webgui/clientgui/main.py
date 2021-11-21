@@ -12,6 +12,14 @@ from sqlalchemy import text, exc
 import capstoneclient.zone_control_defs as zc
 import capstoneclient.weatherdata as wd
 import capstoneclient.cronjobs as cj
+from capstoneclient.isOnRaspi import isOnRaspi 
+on_raspi = isOnRaspi()
+if on_raspi:
+    # this try/except lets code function outside of raspberry pi for development.
+    import capstoneclient.sensors as sens
+else:
+    import capstoneclient.not_raspi as sens
+
 #import subprocess as sp
 
 bp = Blueprint('main', __name__)
@@ -62,10 +70,11 @@ def home ():
     
     weather_data = wd.get_weather_data_for_webgui(db)
     weather_hist = weather_data['history']
+    weather_fore = weather_data['forecast']
     #weather_hist = [{'hey':0}]
     #already flipped in the data
     #weather_hist.reverse() # flip the order so that left is the furthest date away and right most is yesterday
-    return render_template('home.html', croninfo=croninfo, systemInfo=systemInfo,weatherHist=weather_hist)
+    return render_template('home.html', croninfo=croninfo, systemInfo=systemInfo,weatherHist=weather_hist,weather_fore=weather_fore)
 
 
 def my_cronschedule():
@@ -78,19 +87,32 @@ def my_cronschedule():
   #      return_str = return_str + "\nOn {}, zone 1 will run for {} minutes starting at {}:{}.".format(days[x][0], days[x][3], days[x][2], days[x][1]))
     return str(return_str)
 
+def sanitize_num_input(num,defval=0):
+    if num == '':
+        num = defval
+    else:
+        try:
+            num = int(num)
+        except:
+            num = defval
+    return num
+
 @bp.route('/add_zone_event', methods=('GET', 'POST'))
 @login_required
 def add_zone_event ():
     dowlist = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
     if request.method == 'POST':
-        dow_input_list = request.form.getlist('dow')
-        start_hr = request.form.get('start_hr')
-        start_min = request.form.get('start_min')
-        end_hr = request.form.get('end_hr')
-        end_min = request.form.get('end_min')
-        #cj.create_zone_event(1, ['SAT','SUN','TUE','THU'], 14, 21, 14, 22)
-        #def create_zone_event(zonenum, dow, start_hr, start_min, end_hr, end_min):
-        cj.create_zone_event(1, dow_input_list, start_hr, start_min, end_hr, end_min)
+        if request.form.get('Add'):
+            dow_input_list = request.form.getlist('dow')
+            start_hr = sanitize_num_input(request.form.get('start_hr'), 9)
+            start_min = sanitize_num_input(request.form.get('start_min'),0)
+            end_hr = sanitize_num_input(request.form.get('end_hr'), start_hr)
+            end_min = sanitize_num_input(request.form.get('end_min'),30)
+            #cj.create_zone_event(1, ['SAT','SUN','TUE','THU'], 14, 21, 14, 22)
+            #def create_zone_event(zonenum, dow, start_hr, start_min, end_hr, end_min):
+            cj.create_zone_event(1, dow_input_list, start_hr, start_min, end_hr, end_min)
+        elif request.form.get("rm"):
+            cj.clear_zone_control()
 
     croninfo = cj.get_cron_sched_for_webgui(cj.ZONE_CONTROL_COMMENT_NAME)
     return render_template('add_zone_event.html', croninfo=croninfo, dowlist=dowlist)
@@ -99,38 +121,13 @@ def add_zone_event ():
 @login_required
 def clientlog ():
     clientDir = os.getenv('SIOclientDir')
-#    if request.method == 'POST':
-#        if request.form.get('Toggle Zone1') == 'Toggle Zone1':
-#            # pass
-#            #print("Toggle Zone1 Valve!!!")
-#            zc.toggle_valve(1)
-#        elif  request.form.get('Open Zone1') == 'Open Zone1':
-#            if clientDir is None:
-#                zc.open_valve(1)
-#            else:
-#                os.system(f"cd {clientDir}; ./runPy.sh ./zone_control.py z1 0 on")
-#        elif  request.form.get('Close Zone1') == 'Close Zone1':
-#            if clientDir is None:
-#                zc.close_valve(1)
-#            else:
-#                os.system(f"cd {clientDir}; ./runPy.sh ./zone_control.py z1 0 off")
-#        elif  request.form.get('Enable WaterDemo') == 'Enable WaterDemo':
-#            if clientDir is not None:
-#                os.system(f"cd {clientDir}; ./runPy.sh ./capstoneclient/demo.py")
-#        elif  request.form.get('Disable WaterDemo') == 'Disable WaterDemo':
-#            import capstoneclient.demo as demo
-#            demo.disable_demo_water_mode()
-##            if clientDir is not None:
-##                os.system(f"cd {clientDir}; ./runPy.sh ./capstoneclient/demo.py")
-#        else:
-#            # pass # unknown
-#            pass
-    #cronsched = my_cronschedule()
     log_filename = clientDir + "/client_dev.log"
 #    log_fh = open(log_filename, 'r')
 #    log_fh.readlines
 #    log_fh.close()
-    cmd_stream = os.popen(f"tail --lines=80 {log_filename}")
+#TODO DW 2021-11-20-17:45 could make display lines an input field
+    displaylines = 100
+    cmd_stream = os.popen(f"tail --lines={displaylines} {log_filename}")
     logText = cmd_stream.read()
     #DW 2021-11-01-14:24 flip the log file lines around so the latest log events are at the top
     logList = logText.split('\n')
@@ -139,5 +136,9 @@ def clientlog ():
     logText = '\n'.join(logList)
     return render_template('logview.html', logText=logText)
 
-
+@bp.route('/adcview', methods=('GET', 'POST'))
+@login_required
+def adcview ():
+    sensor_dict=sens.read_adc_for('all')
+    return render_template('adcview.html', sensor_dict=sensor_dict)
 

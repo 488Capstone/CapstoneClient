@@ -172,8 +172,9 @@ def get_weather_data_for_webgui(dbarg=dm.DBManager()):
     my_sys = DB.get(SystemZoneConfig, "system")
     weather_data = getweather(5, my_sys.lat, my_sys.long)
     hist = weather_data['history']
+
     rtrnVal = {
-                'today': weather_data['today'],
+                'forecast': [],
                 'history': []
             }
  #   key_units = {
@@ -190,23 +191,6 @@ def get_weather_data_for_webgui(dbarg=dm.DBManager()):
  #         "wind_deg": 13.453672647476196,
  #         "wind_gust": 1.34
  #           }
-    for day in hist:
-    #using insert flips the order, which is what we want for the webgui
-        rtrnVal['history'].insert(0, dict())
-        #print(rtrnVal['history'])
-        curdict = rtrnVal['history'][0]
-        day = day['hourly_avg']
-        #print(day)
-        date = dt.datetime.fromtimestamp(round(day['dt'])).date()
-        date = date.strftime("%d-%b-%Y")
-        curdict['Date'] = date
-        avgkeys = list(day.keys())
-        #loop over every key except the first ('dt') and format the key/value to be ready for webgui printing
-        for avgkey in avgkeys[1:]:
-            newkey = f"Avg. {avgkey}"
-            curdict[newkey] = get_weather_data_for_webgui_formatnum(day[avgkey])
-    return rtrnVal
-
 
 #     "hourly_avg": {
 #          "dt": 1637013600.0004292,
@@ -222,6 +206,99 @@ def get_weather_data_for_webgui(dbarg=dm.DBManager()):
 #          "wind_deg": 13.453672647476196,
 #          "wind_gust": 1.34
 #     }
+    for day in hist:
+    #using insert flips the order, which is what we want for the webgui
+        rtrnVal['history'].insert(0, dict())
+        #print(rtrnVal['history'])
+        curdict = rtrnVal['history'][0]
+        day = day['hourly_avg']
+        #print(day)
+        date = dt.datetime.fromtimestamp(round(day['dt'])).date()
+        date = date.strftime("%d-%b-%Y")
+        curdict['Date'] = date
+        avgkeys = list(day.keys())
+        #loop over every key except the first ('dt') and format the key/value to be ready for webgui printing
+        for avgkey in avgkeys[1:]:
+            newkey = f"Avg. {avgkey}"
+            curdict[newkey] = get_weather_data_for_webgui_formatnum(day[avgkey])
+
+#     "daily": [
+#          {
+#               "dt": 1637089200,
+#               "sunrise": 1637071191,
+#               "sunset": 1637108680,
+#               "moonrise": 1637104260,
+#               "moonset": 1637061960,
+#               "moon_phase": 0.42,
+#               "temp": {
+#                    "day": 295.58,
+#                    "min": 290.89,
+#                    "max": 300.73,
+#                    "night": 292.76,
+#                    "eve": 296.45,
+#                    "morn": 291
+#               },
+#               "feels_like": {
+#                    "day": 294.43,
+#                    "night": 291.27,
+#                    "eve": 295.23,
+#                    "morn": 289.44
+#               },
+#               "pressure": 1015,
+#               "humidity": 21,
+#               "dew_point": 272.31,
+#               "wind_speed": 2.61,
+#               "wind_deg": 341,
+#               "wind_gust": 3.26,
+#               "weather": [
+#                    {
+#                         "id": 803,
+#                         "main": "Clouds",
+#                         "description": "broken clouds",
+#                         "icon": "04d"
+#                    }
+#               ],
+#               "clouds": 64,
+#               "pop": 0,
+#               "uvi": 3.2
+#          },
+
+    daynum = 0
+    for day in weather_data['today']['daily'][0:5]:
+        curdict = dict()
+        rtrnVal['forecast'].append(curdict)
+        #print(day)
+        date = dt.datetime.fromtimestamp(round(day['dt'])).date()
+        date = date.strftime("%d-%b-%Y")
+        if daynum==0:
+            date = date + " (today)"
+        curdict['Date'] = date
+        for key in ["sunrise","sunset","moonrise","moonset"]:
+            curdict[key] = str(dt.datetime.fromtimestamp(day[key]))
+        curdict['moon_phase'] = day['moon_phase']
+
+        for key in day["temp"].keys():
+            newkey = "temp_"+key
+            curdict[newkey] = day["temp"][key]
+
+        for key in day["feels_like"].keys():
+            newkey = "feels_like_"+key
+            curdict[newkey] = day["feels_like"][key]
+
+        for key in ["pressure", "humidity", "dew_point", "wind_speed", "wind_deg", "wind_gust"]:
+            curdict[key] = day[key]
+
+        index=0
+        for weath in day["weather"]:
+            curdict[f"weather{index}_info"] = weath["description"]
+            index+=1
+
+        for key in ["clouds", "pop", "uvi"]:
+            curdict[key] = day[key]
+        daynum+=1
+        
+    return rtrnVal
+
     
 
 
