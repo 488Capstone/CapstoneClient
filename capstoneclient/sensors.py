@@ -271,7 +271,7 @@ def read_baro_sensor():
             humidity = 100.0
         elif humidity < 0.0:
             humidity = 0.0
-   except Exception as e:
+    except Exception as e:
         devName = "Baro Sensor"
         print("{0} Read Failed.\t{1}".format(devName, repr(e)))
         import traceback
