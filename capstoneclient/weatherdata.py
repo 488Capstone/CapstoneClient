@@ -217,8 +217,9 @@ def get_weather_data_for_webgui(dbarg=dm.DBManager()):
         date = dt.datetime.fromtimestamp(round(day['dt'])).date()
         date = date.strftime("%d-%b-%Y")
         curdict['Date'] = date
-        day['temp'] = kel_to_cel(day['temp'])
-        day['feels_like'] = kel_to_cel(day['feels_like'])
+        #DW convert all Kelvin temps to Celsius
+        for key in ['temp','feels_like','dew_point']:
+            day[key] = kel_to_cel(day[key])
         avgkeys = list(day.keys())
         #loop over every key except the first ('dt') and format the key/value to be ready for webgui printing
         for avgkey in avgkeys[1:]:
@@ -288,6 +289,10 @@ def get_weather_data_for_webgui(dbarg=dm.DBManager()):
         for key in day["feels_like"].keys():
             newkey = "feels_like_"+key
             curdict[newkey] = get_weather_data_for_webgui_formatnum(kel_to_cel(day["feels_like"][key]))
+        
+        #DW convert all Kelvin temps to Celsius
+        for key in ['dew_point']:
+            day[key] = get_weather_data_for_webgui_formatnum(kel_to_cel(day[key]))
 
         for key in ["pressure", "humidity", "dew_point", "wind_speed", "wind_deg", "wind_gust"]:
             curdict[key] = day[key]
