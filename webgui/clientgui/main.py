@@ -140,5 +140,11 @@ def clientlog ():
 @login_required
 def adcview ():
     sensor_dict=sens.read_adc_for('all')
+    soil_moist, soil_temp = sens.read_soil_sensor()   # value between [200, 2000]
+    baro = sens.read_baro_sensor()   # [cTemp, fTemp, pressure, humidity] but humidity is erroneous
+    sensor_dict['soil_moist'] = soil_moist
+    sensor_dict['soil_tempC'] = soil_temp
+    sensor_dict['baro_tempC'] = baro[0]
+    sensor_dict['baro_pressure'] = baro[2]
     return render_template('adcview.html', sensor_dict=sensor_dict)
 
